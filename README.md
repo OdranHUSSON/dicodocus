@@ -69,21 +69,17 @@ Before setting up Dicodocus, ensure you have the following:
    ```
 
 3. Set up the required environment variables:
-   ```bash
-   export DOCUSAURUS_ROOT_PATH=/path/to/docusaurus/root
-   export DOCUSAURUS_DEFAULT_LANG=en
-   export DOCUSAURUS_ENABLED_LANGS=en,es,fr,de
-   export DOCUSAURUS_MEDIA_DIR=static/img
-   export OPEN_AI_API_KEY=your-openai-api-key-here
-   ```
-   Alternatively, create a `.env` file in the root of the project:
+   Create a `.env.local` file in the root of the project:
    ```env
    DOCUSAURUS_ROOT_PATH=/path/to/docusaurus/root
    DOCUSAURUS_DEFAULT_LANG=en
+   DOCUSAURUS_URL=http://localhost:3003
    DOCUSAURUS_ENABLED_LANGS=en,es,fr,de
    DOCUSAURUS_MEDIA_DIR=static/img
    OPEN_AI_API_KEY=your-openai-api-key-here
    ```
+
+   Docusaurus_url is used to fetch media ( image / videos ) uploaded to the docusaurus static folder
 
 4. Start the application:
    ```bash

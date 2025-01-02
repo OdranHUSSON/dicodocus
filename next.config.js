@@ -1,23 +1,19 @@
-const fs = require('fs');
 const path = require('path');
+const { getPaths } = require('./src/config/docusaurus.js');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   },
-}
-
-try {
-  if (!fs.existsSync('public/img')) {
-    fs.symlinkSync(
-      path.resolve(process.cwd(), '../static/img'),
-      'public/img',
-      'junction'
-    );
-  }
-} catch (error) {
-  console.error('Symlink error:', error);
+  async rewrites() {
+    return [
+      {
+        source: '/img/:path*',
+        destination: `${process.env.DOCUSAURUS_URL}/img/:path*`,
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig
