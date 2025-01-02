@@ -1,8 +1,13 @@
 # Dicodocus
 
 <p align="center">
-  <img src="path/to/logo.png" alt="Dicodocus Logo" width="200"/>
+  <img src="https://dicodocus.com/wp-content/uploads/2024/12/cropped-DICODOCUSLOGO.png" alt="Dicodocus Logo" width="200"/>
 </p>
+
+<p align="center">
+  <a href="https://dicodocus.com">dicodocus.com</a>
+</p>
+
 
 <p align="center">
   Revolutionize Your Docusaurus Docs: An AI-powered, open-source documentation editor
