@@ -1,7 +1,8 @@
 import React from 'react';
-import { Box, Icon, HStack, Text, VStack, useDisclosure, IconButton, Tooltip, Center } from '@chakra-ui/react';
-import { FiFolder, FiFile, FiChevronRight, FiChevronDown, FiFolderPlus, FiFileText, FiInbox } from 'react-icons/fi';
+import { Box, Icon, HStack, Text, VStack, useDisclosure, IconButton, Tooltip, Center, useToast } from '@chakra-ui/react';
+import { FiFolder, FiFile, FiChevronRight, FiChevronDown, FiFolderPlus, FiFileText, FiInbox, FiTrash2 } from 'react-icons/fi';
 import { CreateFileDialog } from './CreateFileDialog';
+import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 
 interface FileItem {
   name: string;
@@ -29,6 +30,9 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [currentPath, setCurrentPath] = React.useState('/');
   const [createType, setCreateType] = React.useState<'file' | 'folder'>('file');
+  const [itemToDelete, setItemToDelete] = React.useState<FileItem | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const toast = useToast();
 
   const toggleFolder = (path: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -44,6 +48,44 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     setCurrentPath(path);
     setCreateType(type);
     onOpen();
+  };
+
+  const handleDelete = async (file: FileItem) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/files/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          path: file.path,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete');
+      }
+
+      toast({
+        title: 'Success',
+        description: `${file.type === 'folder' ? 'Folder' : 'File'} deleted successfully`,
+        status: 'success',
+        duration: 3000,
+      });
+
+      onRefresh?.();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to delete ${file.type}`,
+        status: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setIsDeleting(false);
+      setItemToDelete(null);
+    }
   };
 
   const renderItem = (file: FileItem) => {
@@ -62,7 +104,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
           bg={isSelected ? 'blue.50' : 'transparent'}
           _hover={{ 
             bg: isSelected ? 'blue.50' : 'gray.50',
-            '& .folder-actions': { opacity: 1 }
+            '& .item-actions': { opacity: 1 }
           }}
           transition="all 0.2s"
           position="relative"
@@ -95,52 +137,68 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
             </Text>
           </HStack>
           
-          {isFolder && (
-            <HStack 
-              spacing={1} 
-              className="folder-actions"
-              opacity={0}
-              transition="all 0.2s"
-              position="absolute"
-              right={2}
-              bg={isSelected ? 'blue.50' : 'white'}
-              p={1}
-              borderRadius="md"
-              _groupHover={{ 
-                opacity: 1,
-                shadow: 'sm' 
-              }}
-            >
-              <Tooltip label="New file" openDelay={500}>
-                <IconButton
-                  aria-label="New file"
-                  icon={<FiFileText />}
-                  size="xs"
-                  variant="ghost"
-                  color="gray.500"
-                  _hover={{ color: 'blue.500', bg: 'blue.50' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCreate(file.path, 'file');
-                  }}
-                />
-              </Tooltip>
-              <Tooltip label="New folder" openDelay={500}>
-                <IconButton
-                  aria-label="New folder"
-                  icon={<FiFolderPlus />}
-                  size="xs"
-                  variant="ghost"
-                  color="gray.500"
-                  _hover={{ color: 'blue.500', bg: 'blue.50' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCreate(file.path, 'folder');
-                  }}
-                />
-              </Tooltip>
-            </HStack>
-          )}
+          <HStack 
+            spacing={1} 
+            className="item-actions"
+            opacity={0}
+            transition="all 0.2s"
+            position="absolute"
+            right={2}
+            bg={isSelected ? 'blue.50' : 'white'}
+            p={1}
+            borderRadius="md"
+            _groupHover={{ 
+              opacity: 1,
+              shadow: 'sm' 
+            }}
+          >
+            {isFolder ? (
+              <>
+                <Tooltip label="New file" openDelay={500}>
+                  <IconButton
+                    aria-label="New file"
+                    icon={<FiFileText />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.500"
+                    _hover={{ color: 'blue.500', bg: 'blue.50' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCreate(file.path, 'file');
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip label="New folder" openDelay={500}>
+                  <IconButton
+                    aria-label="New folder"
+                    icon={<FiFolderPlus />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.500"
+                    _hover={{ color: 'blue.500', bg: 'blue.50' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCreate(file.path, 'folder');
+                    }}
+                  />
+                </Tooltip>
+              </>
+            ) : null}
+            <Tooltip label="Delete" openDelay={500}>
+              <IconButton
+                aria-label="Delete"
+                icon={<FiTrash2 />}
+                size="xs"
+                variant="ghost"
+                color="gray.500"
+                _hover={{ color: 'red.500', bg: 'red.50' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setItemToDelete(file);
+                }}
+              />
+            </Tooltip>
+          </HStack>
         </HStack>
         {isFolder && isExpanded && file.children && (
           <Box pl={6}>
@@ -298,6 +356,14 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
           onRefresh?.();
           onClose();
         }}
+      />
+      <DeleteConfirmationDialog
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={() => itemToDelete && handleDelete(itemToDelete)}
+        itemName={itemToDelete?.name || ''}
+        itemType={itemToDelete?.type || 'file'}
+        isLoading={isDeleting}
       />
     </Box>
   );
