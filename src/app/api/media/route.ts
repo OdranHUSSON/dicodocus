@@ -22,9 +22,8 @@ const MEDIA_JSON = path.join(mediaDir, 'media.json');
 
 // Function to convert absolute path to relative Docusaurus path
 function toDocusaurusPath(absolutePath: string): string {
-  const normalizedPath = absolutePath.replace(/\\/g, '/');
-  const relativePath = normalizedPath.split(mediaDir.replace(/\\/g, '/')).pop() || '';
-  return `/img/${relativePath.replace(/^\//, '')}`;
+  const fileName = path.basename(absolutePath);
+  return `/img/${fileName}`;
 }
 
 async function ensureMediaDirectory() {

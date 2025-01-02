@@ -25,8 +25,13 @@ export async function POST(request: NextRequest) {
       ? path.join(docsDir, cleanPath)
       : path.join(i18nDir, language, 'docusaurus-plugin-content-docs/current', cleanPath)
 
-    // Ensure the target file is within the allowed directories
-    if (!fullPath.startsWith(docsDir) && !fullPath.startsWith(i18nDir)) {
+    // Normalize paths for comparison
+    const normalizedFullPath = path.normalize(fullPath)
+    const normalizedDocsDir = path.normalize(docsDir)
+    const normalizedI18nDir = path.normalize(i18nDir)
+
+    // Check if the normalized path starts with either normalized directory
+    if (!normalizedFullPath.startsWith(normalizedDocsDir) && !normalizedFullPath.startsWith(normalizedI18nDir)) {
       return NextResponse.json(
         { error: 'Invalid file path' },
         { status: 403 }
