@@ -10,7 +10,7 @@ import remarkGfm from 'remark-gfm';
 import remarkFrontmatter from 'remark-frontmatter';
 import ChakraUIRenderer, {  defaults } from 'chakra-ui-markdown-renderer';
 import { theme } from '@chakra-ui/react';
-import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
+import { HamburgerIcon, CloseIcon, RepeatIcon } from '@chakra-ui/icons';
 import { editor } from 'monaco-editor';
 import { uploadImageFromClipboard } from '@/utils/uploadImageFromClipboard';
 import * as monaco from 'monaco-editor';
@@ -411,6 +411,30 @@ export default function HomePage() {
     }
   }, [currentLanguage, editorInstance]);
 
+  const refreshFiles = async () => {
+    try {
+      const response = await fetch('/api/files');
+      if (!response.ok) {
+        throw new Error('Failed to fetch files');
+      }
+      const data = await response.json();
+      setFiles(data);
+      toast({
+        title: 'Files refreshed',
+        status: 'success',
+        duration: 2000,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      toast({
+        title: 'Error refreshing files',
+        description: err instanceof Error ? err.message : 'An unknown error occurred',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
   return (
     <Box h="100vh" display="flex" flexDirection="column">
       {/* Top App Bar */}
@@ -476,6 +500,16 @@ export default function HomePage() {
               <TabPanels>
                 <TabPanel p={0}>
                   <Box flex={1} overflowY="auto" maxH="calc(100vh - 160px)">
+                    <HStack p={2} justify="space-between">
+                      <Text fontSize="sm" color="gray.600">Files</Text>
+                      <IconButton
+                        icon={<RepeatIcon />}
+                        size="sm"
+                        variant="ghost"
+                        aria-label="Refresh files"
+                        onClick={refreshFiles}
+                      />
+                    </HStack>
                     {error ? (
                       <Text color="red.500">{error}</Text>
                     ) : (
