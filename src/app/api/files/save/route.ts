@@ -3,12 +3,17 @@ import fs from 'fs/promises'
 import path from 'path'
 import { getPaths, getLanguages } from '@/config/docusaurus'
 
-const { docsDir, i18nDir } = getPaths()
+const { docsDir, blogDir, i18nDir } = getPaths()
 const DEFAULT_LANG = 'en'
 
 export async function POST(request: NextRequest) {
   try {
-    const { path: filePath, content, language = DEFAULT_LANG } = await request.json()
+    const { 
+      path: filePath, 
+      content, 
+      language = DEFAULT_LANG,
+      contentType = 'docs'
+    } = await request.json()
 
     if (!filePath || content === undefined) {
       return NextResponse.json(
@@ -20,18 +25,26 @@ export async function POST(request: NextRequest) {
     // Clean the file path to remove language prefix if it exists
     const cleanPath = filePath.replace(/^\/[a-z]{2}\//, '/')
 
-    // Determine the full path based on language
+    // Determine the full path based on language and content type
     const fullPath = language === DEFAULT_LANG
-      ? path.join(docsDir, cleanPath)
-      : path.join(i18nDir, language, 'docusaurus-plugin-content-docs/current', cleanPath)
+      ? path.join(contentType === 'docs' ? docsDir : blogDir, cleanPath)
+      : path.join(
+          i18nDir, 
+          language, 
+          contentType === 'docs' ? 'docusaurus-plugin-content-docs/current' : 'docusaurus-plugin-content-blog',
+          cleanPath
+        )
 
     // Normalize paths for comparison
     const normalizedFullPath = path.normalize(fullPath)
     const normalizedDocsDir = path.normalize(docsDir)
+    const normalizedBlogDir = path.normalize(blogDir)
     const normalizedI18nDir = path.normalize(i18nDir)
 
-    // Check if the normalized path starts with either normalized directory
-    if (!normalizedFullPath.startsWith(normalizedDocsDir) && !normalizedFullPath.startsWith(normalizedI18nDir)) {
+    // Check if the normalized path starts with any of the allowed directories
+    if (!normalizedFullPath.startsWith(normalizedDocsDir) && 
+        !normalizedFullPath.startsWith(normalizedBlogDir) && 
+        !normalizedFullPath.startsWith(normalizedI18nDir)) {
       return NextResponse.json(
         { error: 'Invalid file path' },
         { status: 403 }
@@ -51,6 +64,7 @@ export async function POST(request: NextRequest) {
       success: true,
       path: cleanPath,
       language,
+      contentType,
       availableLanguages
     })
   } catch (error) {

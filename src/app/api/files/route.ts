@@ -3,63 +3,75 @@ import fs from 'fs/promises'
 import path from 'path'
 import { getPaths } from '@/config/docusaurus'
 
+const paths = getPaths()
+const { docsDir, blogDir } = paths
+
 interface FileItem {
   name: string
-  type: 'file' | 'folder'
+  type: 'file' | 'folder' 
   path: string
   children?: FileItem[]
+  contentType: 'docs' | 'blog'
 }
 
-// Get docsDir from getPaths
-const { docsDir } = getPaths()
-
-async function scanDirectory(dirPath: string): Promise<FileItem[]> {
+async function scanDirectory(dirPath: string, contentType: 'docs' | 'blog', baseDir: string): Promise<FileItem[]> {
   try {
+    try {
+      await fs.access(dirPath)
+    } catch {
+      await fs.mkdir(dirPath, { recursive: true })
+    }
+
     const items = await fs.readdir(dirPath, { withFileTypes: true })
     const result: FileItem[] = []
 
     for (const item of items) {
       const fullPath = path.join(dirPath, item.name)
-      const relativePath = path.relative(docsDir, fullPath) // Store relative path instead of full path
+      const relativePath = path.relative(baseDir, fullPath).replace(/^\.\.\/aismarttalk-docs\/(blog|docs)\//, '')
       
       if (item.isDirectory()) {
-        const children = await scanDirectory(fullPath)
+        const children = await scanDirectory(fullPath, contentType, baseDir)
         result.push({
           name: item.name,
           type: 'folder',
           path: relativePath,
-          children
+          children,
+          contentType
         })
       } else if (item.name.endsWith('.md') || item.name.endsWith('.mdx')) {
         result.push({
           name: item.name,
           type: 'file',
-          path: relativePath
+          path: relativePath,
+          contentType
         })
       }
     }
     return result
   } catch (error) {
-    console.error('Error scanning directory:', error)
+    console.error(`Error scanning directory ${dirPath}:`, error)
     throw error
   }
 }
 
 export async function GET() {
   try {
-    // Create docs directory if it doesn't exist
-    try {
-      await fs.access(docsDir)
-    } catch {
-      await fs.mkdir(docsDir, { recursive: true })
-    }
+    await fs.mkdir(docsDir, { recursive: true })
+    await fs.mkdir(blogDir, { recursive: true })
 
-    const files = await scanDirectory(docsDir)
-    return NextResponse.json(files)
+    const [docsFiles, blogFiles] = await Promise.all([
+      scanDirectory(docsDir, 'docs', docsDir),
+      scanDirectory(blogDir, 'blog', blogDir)
+    ])
+
+    return NextResponse.json({
+      docs: docsFiles,
+      blog: blogFiles
+    })
   } catch (error) {
     console.error('Error in GET /api/files:', error)
     return NextResponse.json(
-      { error: 'Failed to scan directory' },
+      { error: 'Failed to scan directories', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

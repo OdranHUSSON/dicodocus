@@ -20,6 +20,7 @@ interface TranslateModalProps {
   availableLanguages: { code: string; name: string }[];
   currentLanguage: string;
   filePath: string;
+  contentType: 'docs' | 'blog';
 }
 
 export const TranslateModal: React.FC<TranslateModalProps> = ({
@@ -28,6 +29,7 @@ export const TranslateModal: React.FC<TranslateModalProps> = ({
   availableLanguages,
   currentLanguage,
   filePath,
+  contentType,
 }) => {
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(
     availableLanguages.map(lang => lang.code).filter(code => code !== currentLanguage)
@@ -47,6 +49,7 @@ export const TranslateModal: React.FC<TranslateModalProps> = ({
           filePath,
           sourceLang: currentLanguage,
           targetLangs: selectedLanguages,
+          contentType,
         }),
       });
 

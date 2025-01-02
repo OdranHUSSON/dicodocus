@@ -3,12 +3,12 @@ import fs from 'fs/promises'
 import path from 'path'
 import { getPaths } from '@/config/docusaurus'
 
-const { docsDir, i18nDir } = getPaths()
+const { docsDir, i18nDir, blogDir } = getPaths()
 const DEFAULT_LANG = 'en'
 
 export async function POST(request: NextRequest) {
   try {
-    const { path: filePath, type, language = DEFAULT_LANG } = await request.json()
+    const { path: filePath, type, language = DEFAULT_LANG, contentType = 'docs' } = await request.json()
 
     if (!filePath || !type) {
       return NextResponse.json(
@@ -23,17 +23,20 @@ export async function POST(request: NextRequest) {
     // Remove any leading slash to make the path relative
     const relativePath = cleanPath.replace(/^\//, '')
 
-    // Determine the full path based on language
+    // Determine the full path based on language and content type
     const fullPath = language === DEFAULT_LANG
-      ? path.join(docsDir, relativePath)
-      : path.join(i18nDir, language, 'docusaurus-plugin-content-docs/current', relativePath)
+      ? path.join(contentType === 'docs' ? docsDir : blogDir, relativePath)
+      : path.join(i18nDir, language, `docusaurus-plugin-content-${contentType}/current`, relativePath)
 
     // Ensure the target file is within the allowed directories
     const normalizedFullPath = path.normalize(fullPath)
     const normalizedDocsDir = path.normalize(docsDir)
+    const normalizedBlogDir = path.normalize(blogDir)
     const normalizedI18nDir = path.normalize(i18nDir)
 
-    if (!normalizedFullPath.startsWith(normalizedDocsDir) && !normalizedFullPath.startsWith(normalizedI18nDir)) {
+    if (!normalizedFullPath.startsWith(normalizedDocsDir) && 
+        !normalizedFullPath.startsWith(normalizedI18nDir) &&
+        !normalizedFullPath.startsWith(normalizedBlogDir)) {
       return NextResponse.json(
         { error: 'Invalid file path' },
         { status: 403 }

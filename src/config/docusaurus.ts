@@ -20,6 +20,7 @@ interface DocusaurusConfig {
     const { rootDir, i18nDir, mediaDir } = config;
     return {
       docsDir: `${rootDir}/docs`,
+      blogDir: `${rootDir}/blog`,
       i18nDir: `${i18nDir}/i18n`,
       mediaDir: `${rootDir}/${mediaDir}`,
     };

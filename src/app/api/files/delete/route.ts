@@ -3,12 +3,12 @@ import fs from 'fs/promises'
 import path from 'path'
 import { getPaths } from '@/config/docusaurus'
 
-const { docsDir, i18nDir } = getPaths()
+const { docsDir, i18nDir, blogDir } = getPaths()
 const DEFAULT_LANG = 'en'
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { path: filePath, language = DEFAULT_LANG } = await request.json()
+    const { path: filePath, language = DEFAULT_LANG, contentType = 'docs' } = await request.json()
 
     if (!filePath) {
       return NextResponse.json(
@@ -23,10 +23,10 @@ export async function DELETE(request: NextRequest) {
     // Remove any leading slash to make the path relative
     const relativePath = cleanPath.replace(/^\//, '')
 
-    // Determine the full path based on language
+    // Determine the full path based on language and content type
     const fullPath = language === DEFAULT_LANG
-      ? path.join(docsDir, relativePath)
-      : path.join(i18nDir, language, 'docusaurus-plugin-content-docs/current', relativePath)
+      ? path.join(contentType === 'docs' ? docsDir : blogDir, relativePath)
+      : path.join(i18nDir, language, `docusaurus-plugin-content-${contentType}/current`, relativePath)
 
     // Check if path exists
     try {

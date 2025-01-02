@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Icon, HStack, Text, VStack, useDisclosure, IconButton, Tooltip, Center, useToast } from '@chakra-ui/react';
-import { FiFolder, FiFile, FiChevronRight, FiChevronDown, FiFolderPlus, FiFileText, FiInbox, FiTrash2 } from 'react-icons/fi';
+import { FiFolder, FiFile, FiChevronRight, FiChevronDown, FiFolderPlus, FiFileText, FiInbox, FiTrash2, FiChevronsRight, FiChevronsDown } from 'react-icons/fi';
 import { CreateFileDialog } from './CreateFileDialog';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 
@@ -9,27 +9,30 @@ interface FileItem {
   type: 'file' | 'folder';
   path: string;
   children?: FileItem[];
+  contentType: 'docs' | 'blog';
 }
 
 interface FileExplorerProps {
-  files: FileItem[];
+  files: {
+    docs: FileItem[];
+    blog: FileItem[];
+  };
   onFileSelect: (file: FileItem) => void;
   selectedFile?: string;
   onRefresh?: () => void;
-  isRoot?: boolean;
 }
 
 export const FileExplorer: React.FC<FileExplorerProps> = ({ 
   files, 
   onFileSelect, 
   selectedFile,
-  onRefresh,
-  isRoot = true
+  onRefresh
 }) => {
-  const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set(['root']));
+  const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set(['root', 'docs', 'blog']));
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [currentPath, setCurrentPath] = React.useState('/');
   const [createType, setCreateType] = React.useState<'file' | 'folder'>('file');
+  const [currentContentType, setCurrentContentType] = React.useState<'docs' | 'blog'>('docs');
   const [itemToDelete, setItemToDelete] = React.useState<FileItem | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const toast = useToast();
@@ -44,9 +47,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     setExpandedFolders(newExpanded);
   };
 
-  const handleCreate = (path: string, type: 'file' | 'folder') => {
+  const handleCreate = (path: string, type: 'file' | 'folder', contentType: 'docs' | 'blog') => {
     setCurrentPath(path);
     setCreateType(type);
+    setCurrentContentType(contentType);
     onOpen();
   };
 
@@ -60,6 +64,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         },
         body: JSON.stringify({
           path: file.path,
+          contentType: file.contentType
         }),
       });
 
@@ -88,131 +93,129 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     }
   };
 
-  const renderItem = (file: FileItem) => {
-    const isFolder = file.type === 'folder';
-    const isExpanded = expandedFolders.has(file.path);
-    const isSelected = file.path === selectedFile;
+  const renderFileTree = (fileItems: FileItem[], contentType: 'docs' | 'blog') => {
+    return fileItems.map(file => {
+      const isFolder = file.type === 'folder';
+      const isExpanded = expandedFolders.has(file.path);
+      const isSelected = file.path === selectedFile;
 
-    return (
-      <Box key={file.path}>
-        <HStack
-          py={1.5}
-          px={3}
-          spacing={2}
-          cursor="pointer"
-          borderRadius="lg"
-          bg={isSelected ? 'blue.50' : 'transparent'}
-          _hover={{ 
-            bg: isSelected ? 'blue.50' : 'gray.50',
-            '& .item-actions': { opacity: 1 }
-          }}
-          transition="all 0.2s"
-          position="relative"
-          role="group"
-        >
-          <HStack 
-            flex={1} 
-            spacing={3}
-            onClick={() => isFolder ? toggleFolder(file.path) : onFileSelect(file)}
-          >
-            {isFolder && (
-              <Icon 
-                as={isExpanded ? FiChevronDown : FiChevronRight} 
-                color="gray.400"
-                transition="transform 0.2s"
-                transform={isExpanded ? 'rotate(0deg)' : 'rotate(0deg)'}
-              />
-            )}
-            <Icon 
-              as={isFolder ? FiFolder : FiFile} 
-              color={isFolder ? 'blue.400' : 'gray.500'}
-              fontSize="1.1em" 
-            />
-            <Text 
-              fontSize="sm" 
-              fontWeight="medium"
-              color={isSelected ? 'blue.600' : 'gray.700'}
-            >
-              {file.name}
-            </Text>
-          </HStack>
-          
-          <HStack 
-            spacing={1} 
-            className="item-actions"
-            opacity={0}
-            transition="all 0.2s"
-            position="absolute"
-            right={2}
-            bg={isSelected ? 'blue.50' : 'white'}
-            p={1}
-            borderRadius="md"
-            _groupHover={{ 
-              opacity: 1,
-              shadow: 'sm' 
+      const fileWithType = { ...file, contentType };
+
+      return (
+        <Box key={`${contentType}-${file.path}`}>
+          <HStack
+            py={1.5}
+            px={3}
+            spacing={2}
+            cursor="pointer"
+            borderRadius="lg"
+            bg={isSelected ? 'blue.50' : 'transparent'}
+            _hover={{ 
+              bg: isSelected ? 'blue.50' : 'gray.50',
+              '& .item-actions': { opacity: 1 }
             }}
+            transition="all 0.2s"
+            position="relative"
+            role="group"
           >
-            {isFolder ? (
-              <>
-                <Tooltip label="New file" openDelay={500}>
-                  <IconButton
-                    aria-label="New file"
-                    icon={<FiFileText />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.500"
-                    _hover={{ color: 'blue.500', bg: 'blue.50' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCreate(file.path, 'file');
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip label="New folder" openDelay={500}>
-                  <IconButton
-                    aria-label="New folder"
-                    icon={<FiFolderPlus />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.500"
-                    _hover={{ color: 'blue.500', bg: 'blue.50' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCreate(file.path, 'folder');
-                    }}
-                  />
-                </Tooltip>
-              </>
-            ) : null}
-            <Tooltip label="Delete" openDelay={500}>
-              <IconButton
-                aria-label="Delete"
-                icon={<FiTrash2 />}
-                size="xs"
-                variant="ghost"
-                color="gray.500"
-                _hover={{ color: 'red.500', bg: 'red.50' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setItemToDelete(file);
-                }}
+            <HStack 
+              flex={1} 
+              spacing={3}
+              onClick={() => isFolder ? toggleFolder(file.path) : onFileSelect(fileWithType)}
+            >
+              {isFolder && (
+                <Icon 
+                  as={isExpanded ? FiChevronDown : FiChevronRight} 
+                  color="gray.400"
+                  transition="transform 0.2s"
+                  transform={isExpanded ? 'rotate(0deg)' : 'rotate(0deg)'}
+                />
+              )}
+              <Icon 
+                as={isFolder ? FiFolder : FiFile} 
+                color={isFolder ? 'blue.400' : 'gray.500'}
+                fontSize="1.1em" 
               />
-            </Tooltip>
+              <Text 
+                fontSize="sm" 
+                fontWeight="medium"
+                color={isSelected ? 'blue.600' : 'gray.700'}
+              >
+                {file.name}
+              </Text>
+            </HStack>
+            
+            <HStack 
+              spacing={1} 
+              className="item-actions"
+              opacity={0}
+              transition="all 0.2s"
+              position="absolute"
+              right={2}
+              bg={isSelected ? 'blue.50' : 'white'}
+              p={1}
+              borderRadius="md"
+              _groupHover={{ 
+                opacity: 1,
+                shadow: 'sm' 
+              }}
+            >
+              {isFolder ? (
+                <>
+                  <Tooltip label="New file" openDelay={500}>
+                    <IconButton
+                      aria-label="New file"
+                      icon={<FiFileText />}
+                      size="xs"
+                      variant="ghost"
+                      color="gray.500"
+                      _hover={{ color: 'blue.500', bg: 'blue.50' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCreate(file.path, 'file', contentType);
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip label="New folder" openDelay={500}>
+                    <IconButton
+                      aria-label="New folder"
+                      icon={<FiFolderPlus />}
+                      size="xs"
+                      variant="ghost"
+                      color="gray.500"
+                      _hover={{ color: 'blue.500', bg: 'blue.50' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCreate(file.path, 'folder', contentType);
+                      }}
+                    />
+                  </Tooltip>
+                </>
+              ) : null}
+              <Tooltip label="Delete" openDelay={500}>
+                <IconButton
+                  aria-label="Delete"
+                  icon={<FiTrash2 />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.500"
+                  _hover={{ color: 'red.500', bg: 'red.50' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setItemToDelete({ ...file, contentType });
+                  }}
+                />
+              </Tooltip>
+            </HStack>
           </HStack>
-        </HStack>
-        {isFolder && isExpanded && file.children && (
-          <Box pl={6}>
-            <FileExplorer
-              files={file.children}
-              onFileSelect={onFileSelect}
-              selectedFile={selectedFile}
-              onRefresh={onRefresh}
-              isRoot={false}
-            />
-          </Box>
-        )}
-      </Box>
-    );
+          {isFolder && isExpanded && file.children && (
+            <Box pl={6}>
+              {renderFileTree(file.children, contentType)}
+            </Box>
+          )}
+        </Box>
+      );
+    });
   };
 
   const renderEmptyState = () => (
@@ -247,7 +250,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
             variant="ghost"
             color="gray.500"
             _hover={{ color: 'blue.500', bg: 'blue.50' }}
-            onClick={() => handleCreate(currentPath, 'file')}
+            onClick={() => handleCreate(currentPath, 'file', currentContentType)}
           />
           <IconButton
             aria-label="New folder"
@@ -256,7 +259,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
             variant="ghost"
             color="gray.500"
             _hover={{ color: 'blue.500', bg: 'blue.50' }}
-            onClick={() => handleCreate(currentPath, 'folder')}
+            onClick={() => handleCreate(currentPath, 'folder', currentContentType)}
           />
         </HStack>
       </VStack>
@@ -265,40 +268,33 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
 
   return (
     <Box>
-      {isRoot && (
-        <Box p={2}>
+      <VStack align="stretch" spacing={4}>
+        {/* Documentation Section */}
+        <Box>
           <HStack
             py={1.5}
             px={3}
             spacing={2}
             borderRadius="lg"
             bg="gray.50"
+            cursor="pointer"
+            onClick={() => toggleFolder('docs')}
             _hover={{ 
               '& .folder-actions': { opacity: 1 }
             }}
-            transition="all 0.2s"
             position="relative"
             role="group"
           >
             <HStack flex={1} spacing={3}>
               <Icon 
-                as={FiChevronDown} 
+                as={expandedFolders.has('docs') ? FiChevronsDown : FiChevronsRight} 
                 color="gray.400"
               />
-              <Icon 
-                as={FiFolder} 
-                color="blue.400"
-                fontSize="1.1em" 
-              />
-              <Text 
-                fontSize="sm" 
-                fontWeight="medium"
-                color="gray.700"
-              >
-                Documents
+              <Icon as={FiFolder} color="blue.400" fontSize="1.1em" />
+              <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                Documentation
               </Text>
             </HStack>
-            
             <HStack 
               spacing={1} 
               className="folder-actions"
@@ -309,10 +305,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
               bg="white"
               p={1}
               borderRadius="md"
-              _groupHover={{ 
-                opacity: 1,
-                shadow: 'sm' 
-              }}
+              _groupHover={{ opacity: 1, shadow: 'sm' }}
             >
               <Tooltip label="New file" openDelay={500}>
                 <IconButton
@@ -322,7 +315,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   variant="ghost"
                   color="gray.500"
                   _hover={{ color: 'blue.500', bg: 'blue.50' }}
-                  onClick={() => handleCreate('/', 'file')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreate('/', 'file', 'docs');
+                  }}
                 />
               </Tooltip>
               <Tooltip label="New folder" openDelay={500}>
@@ -333,25 +329,103 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   variant="ghost"
                   color="gray.500"
                   _hover={{ color: 'blue.500', bg: 'blue.50' }}
-                  onClick={() => handleCreate('/', 'folder')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreate('/', 'folder', 'docs');
+                  }}
                 />
               </Tooltip>
             </HStack>
           </HStack>
+          {expandedFolders.has('docs') && (
+            <Box pl={6}>
+              {files.docs.length > 0 ? renderFileTree(files.docs, 'docs') : renderEmptyState()}
+            </Box>
+          )}
         </Box>
-      )}
-      <VStack align="stretch" spacing={0} pl={isRoot ? 6 : 0}>
-        {files.length > 0 ? (
-          files.map(renderItem)
-        ) : (
-          renderEmptyState()
-        )}
+
+        {/* Blog Section */}
+        <Box>
+          <HStack
+            py={1.5}
+            px={3}
+            spacing={2}
+            borderRadius="lg"
+            bg="gray.50"
+            cursor="pointer"
+            onClick={() => toggleFolder('blog')}
+            _hover={{ 
+              '& .folder-actions': { opacity: 1 }
+            }}
+            position="relative"
+            role="group"
+          >
+            <HStack flex={1} spacing={3}>
+              <Icon 
+                as={expandedFolders.has('blog') ? FiChevronDown : FiChevronRight} 
+                color="gray.400"
+              />
+              <Icon as={FiFolder} color="green.400" fontSize="1.1em" />
+              <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                Blog
+              </Text>
+            </HStack>
+            <HStack 
+              spacing={1} 
+              className="folder-actions"
+              opacity={0}
+              transition="all 0.2s"
+              position="absolute"
+              right={2}
+              bg="white"
+              p={1}
+              borderRadius="md"
+              _groupHover={{ opacity: 1, shadow: 'sm' }}
+            >
+              <Tooltip label="New file" openDelay={500}>
+                <IconButton
+                  aria-label="New file"
+                  icon={<FiFileText />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.500"
+                  _hover={{ color: 'blue.500', bg: 'blue.50' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreate('/', 'file', 'blog');
+                  }}
+                />
+              </Tooltip>
+              <Tooltip label="New folder" openDelay={500}>
+                <IconButton
+                  aria-label="New folder"
+                  icon={<FiFolderPlus />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.500"
+                  _hover={{ color: 'blue.500', bg: 'blue.50' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreate('/', 'folder', 'blog');
+                  }}
+                />
+              </Tooltip>
+            </HStack>
+          </HStack>
+          {expandedFolders.has('blog') && (
+            <Box pl={6}>
+              {files.blog.length > 0 ? renderFileTree(files.blog, 'blog') : renderEmptyState()}
+            </Box>
+          )}
+        </Box>
       </VStack>
+
       <CreateFileDialog
         isOpen={isOpen}
         onClose={onClose}
         currentPath={currentPath}
         initialType={createType}
+        contentType={currentContentType}
         onFileCreated={() => {
           onRefresh?.();
           onClose();

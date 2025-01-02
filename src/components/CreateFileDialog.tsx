@@ -20,7 +20,8 @@ interface CreateFileDialogProps {
   isOpen: boolean;
   onClose: () => void;
   currentPath: string;
-  initialType?: 'file' | 'folder';
+  initialType: 'file' | 'folder';
+  contentType: 'docs' | 'blog';
   onFileCreated: () => void;
 }
 
@@ -29,6 +30,7 @@ export function CreateFileDialog({
   onClose, 
   currentPath, 
   initialType = 'file',
+  contentType,
   onFileCreated 
 }: CreateFileDialogProps) {
   const [name, setName] = useState('');
@@ -60,6 +62,7 @@ export function CreateFileDialog({
         body: JSON.stringify({
           path: newPath,
           type,
+          contentType,
         }),
       });
 

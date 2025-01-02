@@ -44,6 +44,7 @@ export interface ToolbarProps {
   availableLanguages: Array<{ code: string; name: string }>;
   onLanguageChange: (lang: string) => void;
   filePath: string;
+  contentType: 'docs' | 'blog';
   editorInstance: editor.IStandaloneCodeEditor | null;
 }
 
@@ -56,6 +57,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   availableLanguages,
   onLanguageChange,
   filePath,
+  contentType,
   editorInstance
 }) => {
   const [isTranslateModalOpen, setIsTranslateModalOpen] = useState(false);
@@ -293,6 +295,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         availableLanguages={availableLanguages}
         currentLanguage={currentLanguage}
         filePath={filePath}
+        contentType={contentType}
       />
 
       <MediaLibrary

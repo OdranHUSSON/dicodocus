@@ -4,7 +4,7 @@ import path from 'path'
 import OpenAI from 'openai'
 import { getPaths, getLanguages } from '@/config/docusaurus'
 
-const { docsDir, i18nDir } = getPaths()
+const { docsDir, blogDir, i18nDir } = getPaths()
 const { defaultLanguage } = getLanguages()
 const DEFAULT_LANG = defaultLanguage
 
@@ -12,7 +12,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPEN_AI_API_KEY
 })
 
-// Add logging helper at the top of the file
 const log = (message: string, data?: any) => {
   console.log(`[Translation API] ${message}`, data || '');
 };
@@ -41,8 +40,14 @@ async function translateContent(content: string, targetLang: string): Promise<st
 
 export async function POST(request: NextRequest) {
   try {
-    const { filePath, sourceLang, targetLangs } = await request.json()
-    log('Received translation request', { filePath, sourceLang, targetLangs });
+    const { 
+      filePath, 
+      sourceLang, 
+      targetLangs,
+      contentType = 'docs'
+    } = await request.json()
+    
+    log('Received translation request', { filePath, sourceLang, targetLangs, contentType });
 
     if (!filePath || !sourceLang || !targetLangs || !Array.isArray(targetLangs)) {
       return NextResponse.json(
@@ -52,24 +57,48 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanPath = filePath.replace(/^\/[a-z]{2}\//, '/')
+    
     const sourceFilePath = sourceLang === DEFAULT_LANG
-      ? path.join(docsDir, cleanPath)
-      : path.join(i18nDir, sourceLang, 'docusaurus-plugin-content-docs/current', cleanPath)
+      ? path.join(contentType === 'docs' ? docsDir : blogDir, cleanPath)
+      : path.join(
+          i18nDir, 
+          sourceLang, 
+          contentType === 'docs' 
+            ? 'docusaurus-plugin-content-docs/current' 
+            : 'docusaurus-plugin-content-blog',
+          cleanPath
+        )
 
     const sourceContent = await fs.readFile(sourceFilePath, 'utf-8')
 
     // Translate to each target language
     for (const targetLang of targetLangs) {
       const translatedContent = await translateContent(sourceContent, targetLang)
+      
       const targetFilePath = targetLang === DEFAULT_LANG
-        ? path.join(docsDir, cleanPath)
-        : path.join(i18nDir, targetLang, 'docusaurus-plugin-content-docs/current', cleanPath)
+        ? path.join(contentType === 'docs' ? docsDir : blogDir, cleanPath)
+        : path.join(
+            i18nDir, 
+            targetLang, 
+            contentType === 'docs' 
+              ? 'docusaurus-plugin-content-docs/current' 
+              : 'docusaurus-plugin-content-blog',
+            cleanPath
+          )
 
       await fs.mkdir(path.dirname(targetFilePath), { recursive: true })
       await fs.writeFile(targetFilePath, translatedContent, 'utf-8')
+      
+      log(`Translated and saved to ${targetLang}`, { targetFilePath });
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true,
+      contentType,
+      sourceLang,
+      targetLangs,
+      path: cleanPath
+    })
 
   } catch (error) {
     log('Translation error occurred', error);
@@ -77,6 +106,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: 'Failed to translate file' },
       { status: 500 }
-    );
+    )
   }
 }

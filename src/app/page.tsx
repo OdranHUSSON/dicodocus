@@ -21,6 +21,7 @@ interface FileItem {
   type: 'file' | 'folder';
   path: string;
   children?: FileItem[];
+  contentType: 'docs' | 'blog';
 }
 
 type ViewMode = 'edit' | 'preview' | 'split';
@@ -49,7 +50,7 @@ const AVAILABLE_LANGUAGES = [
 ];
 
 export default function HomePage() {
-  const [files, setFiles] = useState<FileItem[]>([]);
+  const [files, setFiles] = useState<{ docs: FileItem[], blog: FileItem[] }>({ docs: [], blog: [] });
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
@@ -61,6 +62,7 @@ export default function HomePage() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [editorInstance, setEditorInstance] = useState<editor.IStandaloneCodeEditor | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const languageMap: Record<string, string> = {
     en: 'English',
@@ -157,7 +159,7 @@ export default function HomePage() {
     if (file.type === 'file') {
       try {
         const response = await fetch(
-          `/api/files/content?path=${encodeURIComponent(file.path)}&lang=${currentLanguage}`
+          `/api/files/content?path=${encodeURIComponent(file.path)}&lang=${currentLanguage}&contentType=${file.contentType}`
         );
         
         if (!response.ok) throw new Error('Failed to fetch file content');
@@ -186,7 +188,6 @@ export default function HomePage() {
   const handleSave = async (contentToSave?: string) => {
     if (!selectedFile) return;
 
-    // Use the provided content or fall back to fileContent state
     const finalContent = contentToSave ?? fileContent;
 
     try {
@@ -198,7 +199,8 @@ export default function HomePage() {
         body: JSON.stringify({
           path: selectedFile.path,
           content: finalContent,
-          language: currentLanguage
+          language: currentLanguage,
+          contentType: selectedFile.contentType
         }),
       });
 
@@ -242,7 +244,7 @@ export default function HomePage() {
     
     try {
       const response = await fetch(
-        `/api/files/content?path=${encodeURIComponent(selectedFile.path)}&lang=${lang}`
+        `/api/files/content?path=${encodeURIComponent(selectedFile.path)}&lang=${lang}&contentType=${selectedFile.contentType}`
       );
       
       if (!response.ok) throw new Error('Failed to fetch translation');
@@ -382,11 +384,10 @@ export default function HomePage() {
   }, [currentLanguage]); // Dependency on currentLanguage
 
   // Add this helper function
-  const handleMissingTranslationSelect = async (filePath: string) => {
-    // Find the file in the files array
+  const handleMissingTranslationSelect = async (filePath: string, contentType: 'docs' | 'blog') => {
     const findFile = (items: FileItem[]): FileItem | null => {
       for (const item of items) {
-        if (item.path === filePath) return item;
+        if (item.path === filePath && item.contentType === contentType) return item;
         if (item.children) {
           const found = findFile(item.children);
           if (found) return found;
@@ -395,7 +396,7 @@ export default function HomePage() {
       return null;
     };
 
-    const file = findFile(files);
+    const file = findFile(contentType === 'docs' ? files.docs : files.blog);
     if (file) {
       await handleFileSelect(file);
     }
@@ -412,26 +413,34 @@ export default function HomePage() {
   }, [currentLanguage, editorInstance]);
 
   const refreshFiles = async () => {
+    setIsRefreshing(true);
     try {
       const response = await fetch('/api/files');
       if (!response.ok) {
-        throw new Error('Failed to fetch files');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || 'Failed to fetch files');
       }
       const data = await response.json();
       setFiles(data);
+      setError(null); // Clear any existing errors
       toast({
         title: 'Files refreshed',
         status: 'success',
         duration: 2000,
+        isClosable: true,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(errorMessage);
       toast({
         title: 'Error refreshing files',
-        description: err instanceof Error ? err.message : 'An unknown error occurred',
+        description: errorMessage,
         status: 'error',
         duration: 3000,
+        isClosable: true,
       });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -486,7 +495,7 @@ export default function HomePage() {
             bg="gray.50"
           >
             <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-              Documentation
+              Documentation & Blog
             </Text>
           </Box>
           
@@ -508,6 +517,8 @@ export default function HomePage() {
                         variant="ghost"
                         aria-label="Refresh files"
                         onClick={refreshFiles}
+                        isLoading={isRefreshing}
+                        disabled={isRefreshing}
                       />
                     </HStack>
                     {error ? (
@@ -526,6 +537,12 @@ export default function HomePage() {
                     <MissingTranslations
                       onFileSelect={handleMissingTranslationSelect}
                       availableLanguages={AVAILABLE_LANGUAGES}
+                      contentType='docs'
+                    />
+                    <MissingTranslations
+                      onFileSelect={handleMissingTranslationSelect}
+                      availableLanguages={AVAILABLE_LANGUAGES}
+                      contentType='blog'
                     />
                   </Box>
                 </TabPanel>
@@ -563,6 +580,7 @@ export default function HomePage() {
                 onLanguageChange={handleLanguageChange}
                 filePath={selectedFile.path}
                 editorInstance={editorInstance}
+                contentType={selectedFile.contentType}
               />
               <Box flex={1} w="full" display="flex">
                 {(viewMode === 'edit' || viewMode === 'split') && (
@@ -646,7 +664,7 @@ export default function HomePage() {
         justifyContent="space-between"
       >
         <Text fontSize="xs" color="gray.600">
-          {selectedFile ? `${selectedFile.path} - Markdown` : 'Ready'}
+          {selectedFile ? `${selectedFile.path} - ${selectedFile.contentType === 'docs' ? 'Documentation' : 'Blog'}` : 'Ready'}
           {selectedFile && currentLanguage !== contentLanguage && (
             <Text as="span" color="orange.500" ml={2}>
               (Viewing {languageMap[contentLanguage]} version - {languageMap[currentLanguage]} translation not available)

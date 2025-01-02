@@ -18,11 +18,12 @@ interface MissingTranslation {
 }
 
 interface Props {
-  onFileSelect: (path: string) => void;
+  onFileSelect: (path: string, contentType: "docs" | "blog") => void;
+  contentType: 'docs' | 'blog';
   availableLanguages: { code: string; name: string }[];
 }
 
-export function MissingTranslations({ onFileSelect, availableLanguages }: Props) {
+export function MissingTranslations({ onFileSelect,contentType, availableLanguages }: Props) {
   const [missingTranslations, setMissingTranslations] = React.useState<MissingTranslation[]>([]);
   const [loadingItems, setLoadingItems] = React.useState<Set<string>>(new Set());
   const [selectedFile, setSelectedFile] = React.useState<{path: string, missingIn: string[]} | null>(null);
@@ -95,7 +96,7 @@ export function MissingTranslations({ onFileSelect, availableLanguages }: Props)
                     fontSize="sm" 
                     fontWeight="medium"
                     cursor="pointer"
-                    onClick={() => onFileSelect(item.path)}
+                    onClick={() => onFileSelect(item.path, "docs")}
                     mb={1}
                   >
                     {item.path}
@@ -139,6 +140,7 @@ export function MissingTranslations({ onFileSelect, availableLanguages }: Props)
           availableLanguages={availableLanguages}
           currentLanguage="en"
           filePath={selectedFile.path}
+          contentType={contentType}
         />
       )}
     </Box>
