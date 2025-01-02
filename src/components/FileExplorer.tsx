@@ -1,6 +1,6 @@
 import React from 'react';
-import { Box, Icon, HStack, Text, VStack, useDisclosure, IconButton, Tooltip } from '@chakra-ui/react';
-import { FiFolder, FiFile, FiChevronRight, FiChevronDown, FiFolderPlus, FiFileText } from 'react-icons/fi';
+import { Box, Icon, HStack, Text, VStack, useDisclosure, IconButton, Tooltip, Center } from '@chakra-ui/react';
+import { FiFolder, FiFile, FiChevronRight, FiChevronDown, FiFolderPlus, FiFileText, FiInbox } from 'react-icons/fi';
 import { CreateFileDialog } from './CreateFileDialog';
 
 interface FileItem {
@@ -157,6 +157,54 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     );
   };
 
+  const renderEmptyState = () => (
+    <Center 
+      py={8} 
+      px={4}
+      color="gray.500"
+    >
+      <VStack spacing={3}>
+        <Icon 
+          as={FiInbox} 
+          fontSize="2xl"
+          color="gray.400"
+        />
+        <Text 
+          fontSize="sm" 
+          color="gray.500"
+          textAlign="center"
+        >
+          This folder is empty
+        </Text>
+        <HStack 
+          spacing={2}
+          opacity={0.8}
+          _hover={{ opacity: 1 }}
+          transition="opacity 0.2s"
+        >
+          <IconButton
+            aria-label="New file"
+            icon={<FiFileText />}
+            size="sm"
+            variant="ghost"
+            color="gray.500"
+            _hover={{ color: 'blue.500', bg: 'blue.50' }}
+            onClick={() => handleCreate(currentPath, 'file')}
+          />
+          <IconButton
+            aria-label="New folder"
+            icon={<FiFolderPlus />}
+            size="sm"
+            variant="ghost"
+            color="gray.500"
+            _hover={{ color: 'blue.500', bg: 'blue.50' }}
+            onClick={() => handleCreate(currentPath, 'folder')}
+          />
+        </HStack>
+      </VStack>
+    </Center>
+  );
+
   return (
     <Box>
       {isRoot && (
@@ -235,7 +283,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         </Box>
       )}
       <VStack align="stretch" spacing={0} pl={isRoot ? 6 : 0}>
-        {files.map(renderItem)}
+        {files.length > 0 ? (
+          files.map(renderItem)
+        ) : (
+          renderEmptyState()
+        )}
       </VStack>
       <CreateFileDialog
         isOpen={isOpen}
