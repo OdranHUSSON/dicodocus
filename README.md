@@ -28,6 +28,7 @@
 ### 🎮 Instant Media Upload
 Drop images directly into your docs—no more fiddling with file paths or code snippets. Just paste or drag-and-drop, and we'll handle the rest.
 
+
 ### 🌍 AI-Powered Translations
 Automatically translate your documentation into multiple languages while maintaining technical accuracy and natural flow.
 
@@ -36,6 +37,11 @@ Let AI help you draft, expand, or polish your documentation. Perfect for quick s
 
 ### 📊 Missing Translations Analyzer
 Easily track and manage your documentation's translation status across all languages.
+<p align="center">
+  <img src="https://dicodocus.com/wp-content/uploads/2024/12/image-1.png" alt="Dicodocus Missing Translations Analyzer & AI-Powered Translations" width="100%" />
+</p>
+
+
 
 ---
 
