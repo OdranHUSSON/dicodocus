@@ -4,18 +4,19 @@ import { FiFolder, FiFile, FiChevronRight, FiChevronDown, FiFolderPlus, FiFileTe
 import { CreateFileDialog } from './CreateFileDialog';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 
-interface FileItem {
+export interface FileItem {
   name: string;
   type: 'file' | 'folder';
   path: string;
   children?: FileItem[];
-  contentType: 'docs' | 'blog';
+  contentType: 'docs' | 'blog' | 'pages';
 }
 
 interface FileExplorerProps {
   files: {
     docs: FileItem[];
     blog: FileItem[];
+    pages: FileItem[];
   };
   onFileSelect: (file: FileItem) => void;
   selectedFile?: string;
@@ -28,11 +29,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   selectedFile,
   onRefresh
 }) => {
-  const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set(['root', 'docs', 'blog']));
+  const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set(['root', 'docs', 'blog', 'pages']));
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [currentPath, setCurrentPath] = React.useState('/');
   const [createType, setCreateType] = React.useState<'file' | 'folder'>('file');
-  const [currentContentType, setCurrentContentType] = React.useState<'docs' | 'blog'>('docs');
+  const [currentContentType, setCurrentContentType] = React.useState<'docs' | 'blog' | 'pages'>('docs');
   const [itemToDelete, setItemToDelete] = React.useState<FileItem | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const toast = useToast();
@@ -47,7 +48,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     setExpandedFolders(newExpanded);
   };
 
-  const handleCreate = (path: string, type: 'file' | 'folder', contentType: 'docs' | 'blog') => {
+  const handleCreate = (path: string, type: 'file' | 'folder', contentType: 'docs' | 'blog' | 'pages') => {
     setCurrentPath(path);
     setCreateType(type);
     setCurrentContentType(contentType);

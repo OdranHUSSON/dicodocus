@@ -10,7 +10,7 @@ const nextConfig = {
     return [
       {
         source: '/img/:path*',
-        destination: `${process.env.DOCUSAURUS_URL}/img/:path*`,
+        destination: `http://${process.env.DOCUSAURUS_URL}/img/:path*`,
       },
     ];
   },

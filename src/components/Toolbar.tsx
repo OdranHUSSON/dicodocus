@@ -44,7 +44,7 @@ export interface ToolbarProps {
   availableLanguages: Array<{ code: string; name: string }>;
   onLanguageChange: (lang: string) => void;
   filePath: string;
-  contentType: 'docs' | 'blog';
+  contentType: 'docs' | 'blog' | 'pages';
   editorInstance: editor.IStandaloneCodeEditor | null;
 }
 

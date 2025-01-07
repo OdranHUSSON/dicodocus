@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Box, HStack, Text, useToast, VStack, IconButton, Tabs, TabList, TabPanel, TabPanels, Tab } from '@chakra-ui/react';
-import { FileExplorer } from '@/components/FileExplorer';
+import { FileExplorer, FileItem } from '@/components/FileExplorer';
 import { Toolbar } from '@/components/Toolbar';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
@@ -16,13 +16,7 @@ import { uploadImageFromClipboard } from '@/utils/uploadImageFromClipboard';
 import * as monaco from 'monaco-editor';
 import { MissingTranslations } from '@/components/MissingTranslations';
 
-interface FileItem {
-  name: string;
-  type: 'file' | 'folder';
-  path: string;
-  children?: FileItem[];
-  contentType: 'docs' | 'blog';
-}
+
 
 type ViewMode = 'edit' | 'preview' | 'split';
 
@@ -50,7 +44,7 @@ const AVAILABLE_LANGUAGES = [
 ];
 
 export default function HomePage() {
-  const [files, setFiles] = useState<{ docs: FileItem[], blog: FileItem[] }>({ docs: [], blog: [] });
+  const [files, setFiles] = useState<{ docs: FileItem[], blog: FileItem[], pages: FileItem[] }>({ docs: [], blog: [], pages: [] });
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [fileContent, setFileContent] = useState<string>('');

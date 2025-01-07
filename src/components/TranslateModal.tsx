@@ -20,7 +20,7 @@ interface TranslateModalProps {
   availableLanguages: { code: string; name: string }[];
   currentLanguage: string;
   filePath: string;
-  contentType: 'docs' | 'blog';
+  contentType: 'docs' | 'blog' | 'pages';
 }
 
 export const TranslateModal: React.FC<TranslateModalProps> = ({
