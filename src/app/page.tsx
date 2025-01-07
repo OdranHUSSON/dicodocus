@@ -16,6 +16,7 @@ import { uploadImageFromClipboard } from '@/utils/uploadImageFromClipboard';
 import * as monaco from 'monaco-editor';
 import { MissingTranslations } from '@/components/MissingTranslations';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
+import { DragDropEditor } from '@/components/DragDropEditor';
 
 
 
@@ -579,13 +580,21 @@ export default function HomePage() {
               />
               <Box flex={1} w="full" display="flex">
                 {(viewMode === 'edit' || viewMode === 'split') && (
-                  <MarkdownEditor
-                    content={fileContent}
-                    onChange={setFileContent}
-                    onSave={handleSave}
-                    viewMode={viewMode}
-                    onEditorMount={handleEditorDidMount}
-                  />
+                  selectedFile?.contentType === 'pages' ? (
+                    <DragDropEditor
+                      content={fileContent}
+                      onChange={setFileContent}
+                      onSave={handleSave}
+                    />
+                  ) : (
+                    <MarkdownEditor
+                      content={fileContent}
+                      onChange={setFileContent}
+                      onSave={handleSave}
+                      viewMode={viewMode}
+                      onEditorMount={handleEditorDidMount}
+                    />
+                  )
                 )}
                 {(viewMode === 'preview' || viewMode === 'split') && (
                   <Box 
