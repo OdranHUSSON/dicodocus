@@ -3,7 +3,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { getPaths, getLanguages } from '@/config/docusaurus'
 
-const { docsDir, blogDir, i18nDir } = getPaths()
+const { docsDir, blogDir, i18nDir, pagesDir } = getPaths()
 const { defaultLanguage } = getLanguages()
 const DEFAULT_LANG = process.env.DOCUSAURUS_DEFAULT_LANG || 'en'
 
@@ -22,15 +22,23 @@ export async function GET(request: NextRequest) {
 
     const getFullPath = (language: string) => {
       if (language === DEFAULT_LANG) {
-        if (contentType === 'blog') {
-          return path.join(blogDir, cleanPath)
+        switch (contentType) {
+          case 'blog':
+            return path.join(blogDir, cleanPath)
+          case 'pages':
+            return path.join(pagesDir, cleanPath)
+          default: // 'docs'
+            return path.join(docsDir, cleanPath)
         }
-        return path.join(docsDir, cleanPath)
       } else {
-        if (contentType === 'blog') {
-          return path.join(i18nDir, language, 'docusaurus-plugin-content-blog', cleanPath)
+        switch (contentType) {
+          case 'blog':
+            return path.join(i18nDir, language, 'docusaurus-plugin-content-blog', cleanPath)
+          case 'pages':
+            return path.join(i18nDir, language, 'docusaurus-plugin-content-pages', cleanPath)
+          default: // 'docs'
+            return path.join(i18nDir, language, 'docusaurus-plugin-content-docs/current', cleanPath)
         }
-        return path.join(i18nDir, language, 'docusaurus-plugin-content-docs/current', cleanPath)
       }
     }
 
@@ -41,13 +49,18 @@ export async function GET(request: NextRequest) {
       const normalizedPath = path.normalize(pathToCheck)
       const normalizedDocsDir = path.normalize(docsDir)
       const normalizedBlogDir = path.normalize(blogDir)
+      const normalizedPagesDir = path.normalize(pagesDir)
       const normalizedI18nDir = path.normalize(i18nDir)
 
       if (lang === DEFAULT_LANG) {
-        if (contentType === 'blog') {
-          return normalizedPath.startsWith(normalizedBlogDir)
+        switch (contentType) {
+          case 'blog':
+            return normalizedPath.startsWith(normalizedBlogDir)
+          case 'pages':
+            return normalizedPath.startsWith(normalizedPagesDir)
+          default: // 'docs'
+            return normalizedPath.startsWith(normalizedDocsDir)
         }
-        return normalizedPath.startsWith(normalizedDocsDir)
       } else {
         return normalizedPath.startsWith(normalizedI18nDir)
       }

@@ -15,6 +15,7 @@ import { editor } from 'monaco-editor';
 import { uploadImageFromClipboard } from '@/utils/uploadImageFromClipboard';
 import * as monaco from 'monaco-editor';
 import { MissingTranslations } from '@/components/MissingTranslations';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 
 
 
@@ -578,31 +579,13 @@ export default function HomePage() {
               />
               <Box flex={1} w="full" display="flex">
                 {(viewMode === 'edit' || viewMode === 'split') && (
-                  <Box 
-                    w={viewMode === 'split' ? '50%' : 'full'}
-                    height="calc(100vh - 112px)"
-                    overflowY="auto"
-                  >
-                    <Editor
-                      height="100%"
-                      language="markdown"
-                      value={fileContent}
-                      onChange={(value) => setFileContent(value || '')}
-                      theme="vs-light"
-                      onMount={handleEditorDidMount}
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        lineNumbers: 'on',
-                        wordWrap: 'on',
-                        lineHeight: 1.6,
-                        padding: { top: 20 },
-                        scrollBeyondLastLine: false,
-                        automaticLayout: true,
-                        suggestOnTriggerCharacters: true,
-                      }}
-                    />
-                  </Box>
+                  <MarkdownEditor
+                    content={fileContent}
+                    onChange={setFileContent}
+                    onSave={handleSave}
+                    viewMode={viewMode}
+                    onEditorMount={handleEditorDidMount}
+                  />
                 )}
                 {(viewMode === 'preview' || viewMode === 'split') && (
                   <Box 
