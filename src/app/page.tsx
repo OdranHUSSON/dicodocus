@@ -285,6 +285,11 @@ export default function HomePage() {
         </Text>
       );
     },
+    img: (props: any) => {
+      const { src, alt } = props;
+      const imageSrc = src.startsWith('http') ? src : `${process.env.NEXT_PUBLIC_DOCUSAURUS_URL}${src}`;
+      return <img src={imageSrc} alt={alt} />;
+    },
     // Add more custom components as needed
   };
 

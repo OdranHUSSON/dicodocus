@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
-import { Box, VStack, Text, useColorModeValue } from '@chakra-ui/react';
+import { Box, VStack, Text, useColorModeValue, Spinner } from '@chakra-ui/react';
 import { useDrag } from 'react-dnd';
 import type { Identifier } from 'dnd-core';
+import { ComponentTemplate } from '@/types/components';
 
 interface ComponentItemProps {
   component: any;
@@ -38,10 +39,11 @@ function ComponentItem({ component }: ComponentItemProps) {
 }
 
 interface ComponentPaletteProps {
-  components: any[];
+  components: ComponentTemplate[];
+  isLoading: boolean;
 }
 
-export function ComponentPalette({ components }: ComponentPaletteProps) {
+export function ComponentPalette({ components, isLoading }: ComponentPaletteProps) {
   return (
     <Box
       w="250px"
@@ -55,11 +57,19 @@ export function ComponentPalette({ components }: ComponentPaletteProps) {
       <Text fontWeight="bold" mb={4}>
         Components
       </Text>
-      <VStack spacing={2} align="stretch">
-        {components.map((component) => (
-          <ComponentItem key={component.id} component={component} />
-        ))}
-      </VStack>
+      {isLoading ? (
+        <Box display="flex" justifyContent="center" py={8}>
+          <Spinner />
+        </Box>
+      ) : components.length === 0 ? (
+        <Text color="gray.500">No components found</Text>
+      ) : (
+        <VStack spacing={2} align="stretch">
+          {components.map((component) => (
+            <ComponentItem key={component.id} component={component} />
+          ))}
+        </VStack>
+      )}
     </Box>
   );
 }

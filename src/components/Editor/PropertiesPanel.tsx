@@ -1,8 +1,25 @@
 import React from 'react';
 import { Box, VStack, Text, Input, FormControl, FormLabel } from '@chakra-ui/react';
 
+interface PropConfig {
+  type: string;
+  default: any;
+}
+
+interface ComponentInstance {
+  instanceId: string;
+  id: string;
+  name: string;
+  propConfigs: {
+    [key: string]: PropConfig;
+  };
+  props: {
+    [key: string]: any;
+  };
+}
+
 interface PropertiesPanelProps {
-  component: any;
+  component: ComponentInstance | null;
   onPropertyChange: (componentId: string, propName: string, value: any) => void;
 }
 
@@ -21,18 +38,22 @@ export function PropertiesPanel({ component, onPropertyChange }: PropertiesPanel
         {component.name} Properties
       </Text>
       <VStack spacing={4} align="stretch">
-        {Object.entries(component.props).map(([propName, propConfig]: [string, any]) => (
-          <FormControl key={propName}>
-            <FormLabel fontSize="sm">{propName}</FormLabel>
-            <Input
-              size="sm"
-              value={component.props[propName]}
-              onChange={(e) =>
-                onPropertyChange(component.id, propName, e.target.value)
-              }
-            />
-          </FormControl>
-        ))}
+        {Object.entries(component.propConfigs).map(([propName, propConfig]) => {
+          const currentValue = component.props[propName] ?? propConfig.default;
+
+          return (
+            <FormControl key={propName}>
+              <FormLabel fontSize="sm">{propName}</FormLabel>
+              <Input
+                size="sm"
+                value={currentValue}
+                onChange={(e) =>
+                  onPropertyChange(component.instanceId, propName, e.target.value)
+                }
+              />
+            </FormControl>
+          );
+        })}
       </VStack>
     </Box>
   );
