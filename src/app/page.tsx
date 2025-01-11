@@ -17,6 +17,7 @@ import * as monaco from 'monaco-editor';
 import { MissingTranslations } from '@/components/MissingTranslations';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 import { DragDropEditor } from '@/components/DragDropEditor';
+import { v4 as uuidv4 } from 'uuid';
 
 
 
@@ -43,6 +44,16 @@ const AVAILABLE_LANGUAGES = [
   { code: 'fr', name: 'French' },
   { code: 'de', name: 'German' },
   { code: 'lu', name: 'Luxembourgish' },
+];
+
+// Add these image types at the top with your other constants
+const SUPPORTED_IMAGE_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp',
 ];
 
 export default function HomePage() {
@@ -316,34 +327,59 @@ export default function HomePage() {
       let hasHandledImage = false;
 
       for (const item of clipboardItems) {
-        if (item.types.includes('image/png') || item.types.includes('image/jpeg')) {
+        const imageType = item.types.find(type => SUPPORTED_IMAGE_TYPES.includes(type));
+        
+        if (imageType) {
           hasHandledImage = true;
-          const blob = await item.getType(item.types[0]);
-          const file = new File([blob], 'pasted-image.png', { type: item.types[0] });
+          const blob = await item.getType(imageType);
+          const fileExtension = imageType.split('/')[1];
+          const uuid = uuidv4();
+          const fileName = `${uuid}.${fileExtension}`;
 
+          // Create form data with additional metadata
           const formData = new FormData();
-          formData.append('file', file);
-
+          formData.append('file', new File([blob], fileName, { type: imageType }));
+          formData.append('description', 'Pasted image'); // Default description
+          
           const response = await fetch('/api/media', {
             method: 'POST',
             body: formData,
           });
           
-          if (!response.ok) throw new Error('Upload failed');
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Upload failed');
+          }
           
           const data = await response.json();
           
+          // Insert markdown at current selection or cursor position
           const selection = editor.getSelection();
+          const imageMarkdown = `![${data.name}](${data.path})`;
+          
           if (selection) {
-            const imageMarkdown = `![${data.name}](${data.path})`;
             editor.executeEdits('', [{
               range: selection,
               text: imageMarkdown,
             }]);
+          } else {
+            const position = editor.getPosition();
+            if (position) {
+              editor.executeEdits('', [{
+                range: {
+                  startLineNumber: position.lineNumber,
+                  startColumn: position.column,
+                  endLineNumber: position.lineNumber,
+                  endColumn: position.column,
+                },
+                text: imageMarkdown,
+              }]);
+            }
           }
 
           toast({
             title: 'Image uploaded successfully',
+            description: `Saved as ${data.name}`,
             status: 'success',
             duration: 3000,
           });
@@ -351,13 +387,19 @@ export default function HomePage() {
         }
       }
 
-      // If no image was handled, let the default paste happen
       if (!hasHandledImage) {
-        return true; // Allow the default paste behavior
+        return true; // Allow default paste behavior
       }
-      return false; // Prevent default only if we handled an image
+      return false; // Prevent default paste behavior
+      
     } catch (error) {
       console.error('Paste error:', error);
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload image',
+        status: 'error',
+        duration: 3000,
+      });
       return true; // Allow default paste on error
     }
   };
