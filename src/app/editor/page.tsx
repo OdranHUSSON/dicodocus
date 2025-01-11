@@ -18,6 +18,7 @@ import { MissingTranslations } from '@/components/MissingTranslations';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 import { DragDropEditor } from '@/components/DragDropEditor';
 import { v4 as uuidv4 } from 'uuid';
+import remarkBreaks from 'remark-breaks';
 
 type ViewMode = 'edit' | 'preview' | 'split';
 
@@ -312,9 +313,34 @@ export default function HomePage() {
     img: (props: any) => {
       const { src, alt } = props;
       const imageSrc = src.startsWith('http') ? src : `${process.env.NEXT_PUBLIC_DOCUSAURUS_URL}${src}`;
-      return <img src={imageSrc} alt={alt} />;
+      return <img src={imageSrc} alt={alt} style={{ maxWidth: '100%' }} />;
     },
-    // Add more custom components as needed
+    table: (props: any) => {
+      return (
+        <Box overflowX="auto" my={4}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>{props.children}</table>
+        </Box>
+      );
+    },
+    th: (props: any) => (
+      <th style={{ 
+        borderWidth: '1px', 
+        borderColor: 'inherit', 
+        padding: '0.5rem', 
+        backgroundColor: 'gray.50' 
+      }}>
+        {props.children}
+      </th>
+    ),
+    td: (props: any) => (
+      <td style={{ 
+        borderWidth: '1px', 
+        borderColor: 'inherit', 
+        padding: '0.5rem' 
+      }}>
+        {props.children}
+      </td>
+    ),
   };
 
   const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor) => {
@@ -668,7 +694,7 @@ export default function HomePage() {
                     <Box p={8} maxW={viewMode === 'preview' ? '800px' : undefined} mx="auto">
                       <ReactMarkdown
                         components={ChakraUIRenderer(markdownTheme)}
-                        remarkPlugins={[remarkGfm, remarkFrontmatter]}
+                        remarkPlugins={[remarkFrontmatter, remarkBreaks]}
                         skipHtml
                       >
                         {fileContent}
