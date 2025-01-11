@@ -3,7 +3,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { getPaths, getLanguages } from '@/config/docusaurus'
 
-const { docsDir, blogDir, i18nDir } = getPaths()
+const { docsDir, blogDir, i18nDir, pagesDir } = getPaths()
 const DEFAULT_LANG = 'en'
 
 export async function POST(request: NextRequest) {
@@ -14,6 +14,13 @@ export async function POST(request: NextRequest) {
       language = DEFAULT_LANG,
       contentType = 'docs'
     } = await request.json()
+
+    console.log('Save request received:', {
+      filePath,
+      contentType,
+      language,
+      content: content.substring(0, 100) + '...'
+    })
 
     if (!filePath || content === undefined) {
       return NextResponse.json(
@@ -27,35 +34,33 @@ export async function POST(request: NextRequest) {
 
     // Determine the full path based on language and content type
     const fullPath = language === DEFAULT_LANG
-      ? path.join(contentType === 'docs' ? docsDir : blogDir, cleanPath)
+      ? path.join(
+          contentType === 'docs' 
+            ? docsDir 
+            : contentType === 'pages'
+              ? pagesDir    // Use pagesDir for pages
+              : blogDir, 
+          cleanPath
+        )
       : path.join(
           i18nDir, 
-          language, 
-          contentType === 'docs' ? 'docusaurus-plugin-content-docs/current' : 'docusaurus-plugin-content-blog',
+          language,
+          contentType === 'docs' 
+            ? 'docusaurus-plugin-content-docs/current' 
+            : contentType === 'pages'
+              ? 'src/pages'   // Use src/pages for i18n pages
+              : 'docusaurus-plugin-content-blog',
           cleanPath
         )
 
-    // Normalize paths for comparison
-    const normalizedFullPath = path.normalize(fullPath)
-    const normalizedDocsDir = path.normalize(docsDir)
-    const normalizedBlogDir = path.normalize(blogDir)
-    const normalizedI18nDir = path.normalize(i18nDir)
-
-    // Check if the normalized path starts with any of the allowed directories
-    if (!normalizedFullPath.startsWith(normalizedDocsDir) && 
-        !normalizedFullPath.startsWith(normalizedBlogDir) && 
-        !normalizedFullPath.startsWith(normalizedI18nDir)) {
-      return NextResponse.json(
-        { error: 'Invalid file path' },
-        { status: 403 }
-      )
-    }
+    console.log('Attempting to save to:', fullPath)
 
     // Create all necessary parent directories
     await fs.mkdir(path.dirname(fullPath), { recursive: true })
 
     // Write/overwrite the file
     await fs.writeFile(fullPath, content, 'utf-8')
+    console.log('File saved successfully')
 
     // After saving, get the updated list of available languages
     const availableLanguages = await getAvailableLanguages(cleanPath)

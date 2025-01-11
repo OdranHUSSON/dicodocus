@@ -1,43 +1,43 @@
 import React, { useState } from 'react';
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Button,
-  Checkbox,
-  VStack,
-  Text,
   useToast,
   Progress,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItemOption,
+  MenuOptionGroup,
+  Button,
 } from '@chakra-ui/react';
 
-interface TranslateModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface TranslateMenuProps {
   availableLanguages: { code: string; name: string }[];
   currentLanguage: string;
   filePath: string;
-  contentType: 'docs' | 'blog';
+  contentType: 'docs' | 'blog' | 'pages';
 }
 
-export const TranslateModal: React.FC<TranslateModalProps> = ({
-  isOpen,
-  onClose,
+export const TranslateMenu: React.FC<TranslateMenuProps> = ({
   availableLanguages,
   currentLanguage,
   filePath,
   contentType,
 }) => {
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(
-    availableLanguages.map(lang => lang.code).filter(code => code !== currentLanguage)
-  );
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [isTranslating, setIsTranslating] = useState(false);
   const toast = useToast();
 
   const handleTranslate = async () => {
+    const toastId = toast({
+      title: 'Translation in progress',
+      description: (
+        <Progress size="xs" isIndeterminate />
+      ),
+      status: 'info',
+      duration: null,
+      isClosable: false,
+    });
+
     setIsTranslating(true);
     try {
       const response = await fetch('/api/files/translate', {
@@ -57,13 +57,14 @@ export const TranslateModal: React.FC<TranslateModalProps> = ({
         throw new Error('Translation failed');
       }
 
+      toast.close(toastId);
       toast({
         title: 'Translation complete',
         status: 'success',
         duration: 3000,
       });
-      onClose();
     } catch (error) {
+      toast.close(toastId);
       toast({
         title: 'Translation failed',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -76,50 +77,32 @@ export const TranslateModal: React.FC<TranslateModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Translate Document</ModalHeader>
-        <ModalBody>
-          <Text mb={4}>
-            Translating from: <strong>{availableLanguages.find(lang => lang.code === currentLanguage)?.name}</strong>
-          </Text>
-          <Text mb={2}>Select target languages:</Text>
-          <VStack align="start" spacing={2}>
-            {availableLanguages
-              .filter(lang => lang.code !== currentLanguage)
-              .map(lang => (
-                <Checkbox
-                  key={lang.code}
-                  isChecked={selectedLanguages.includes(lang.code)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedLanguages([...selectedLanguages, lang.code]);
-                    } else {
-                      setSelectedLanguages(selectedLanguages.filter(code => code !== lang.code));
-                    }
-                  }}
-                >
-                  {lang.name}
-                </Checkbox>
-              ))}
-          </VStack>
-          {isTranslating && <Progress size="xs" isIndeterminate mt={4} />}
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            colorScheme="blue"
-            onClick={handleTranslate}
-            isLoading={isTranslating}
-            isDisabled={selectedLanguages.length === 0}
-          >
-            Translate
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+    <Menu closeOnSelect={false}>
+      <MenuButton as={Button} isLoading={isTranslating}>
+        Translate
+      </MenuButton>
+      <MenuList minWidth='240px'>
+        <MenuOptionGroup type='checkbox' onChange={(values) => setSelectedLanguages(values as string[])}>
+          {availableLanguages
+            .filter(lang => lang.code !== currentLanguage)
+            .map(lang => (
+              <MenuItemOption key={lang.code} value={lang.code}>
+                {lang.name}
+              </MenuItemOption>
+            ))}
+        </MenuOptionGroup>
+        <Button
+          mt={2}
+          mx={3}
+          colorScheme="blue"
+          onClick={handleTranslate}
+          isDisabled={selectedLanguages.length === 0}
+          size="sm"
+          width="calc(100% - 24px)"
+        >
+          Translate
+        </Button>
+      </MenuList>
+    </Menu>
   );
 };

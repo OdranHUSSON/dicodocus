@@ -213,7 +213,7 @@ export function MediaLibrary({ isOpen, onClose, onSelect }: MediaLibraryProps) {
                       <FiTrash2 />
                     </Button>
                     <Image
-                      src={`/img/${item.path.split('/').pop()}`}
+                      src={`${process.env.NEXT_PUBLIC_DOCUSAURUS_URL}/img/${item.path.split('/').pop()}`}
                       alt={item.name}
                       height="100px"
                       width="100%"

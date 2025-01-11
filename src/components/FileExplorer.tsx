@@ -4,18 +4,19 @@ import { FiFolder, FiFile, FiChevronRight, FiChevronDown, FiFolderPlus, FiFileTe
 import { CreateFileDialog } from './CreateFileDialog';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 
-interface FileItem {
+export interface FileItem {
   name: string;
   type: 'file' | 'folder';
   path: string;
   children?: FileItem[];
-  contentType: 'docs' | 'blog';
+  contentType: 'docs' | 'blog' | 'pages';
 }
 
 interface FileExplorerProps {
   files: {
     docs: FileItem[];
     blog: FileItem[];
+    pages: FileItem[];
   };
   onFileSelect: (file: FileItem) => void;
   selectedFile?: string;
@@ -28,11 +29,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   selectedFile,
   onRefresh
 }) => {
-  const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set(['root', 'docs', 'blog']));
+  const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set(['root', 'docs', 'blog', 'pages']));
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [currentPath, setCurrentPath] = React.useState('/');
   const [createType, setCreateType] = React.useState<'file' | 'folder'>('file');
-  const [currentContentType, setCurrentContentType] = React.useState<'docs' | 'blog'>('docs');
+  const [currentContentType, setCurrentContentType] = React.useState<'docs' | 'blog' | 'pages'>('docs');
   const [itemToDelete, setItemToDelete] = React.useState<FileItem | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const toast = useToast();
@@ -47,7 +48,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     setExpandedFolders(newExpanded);
   };
 
-  const handleCreate = (path: string, type: 'file' | 'folder', contentType: 'docs' | 'blog') => {
+  const handleCreate = (path: string, type: 'file' | 'folder', contentType: 'docs' | 'blog' | 'pages') => {
     setCurrentPath(path);
     setCreateType(type);
     setCurrentContentType(contentType);
@@ -79,6 +80,15 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         duration: 3000,
       });
 
+      // If we deleted the current file, select the first available file
+      if (selectedFile === file.path) {
+        // Try to select first file from any section
+        const firstFile = files.docs[0] || files.blog[0] || files.pages[0];
+        if (firstFile) {
+          onFileSelect({...firstFile, contentType: 'docs'});
+        }
+      }
+
       onRefresh?.();
     } catch (error) {
       toast({
@@ -93,7 +103,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     }
   };
 
-  const renderFileTree = (fileItems: FileItem[], contentType: 'docs' | 'blog') => {
+  const renderFileTree = (fileItems: FileItem[], contentType: 'docs' | 'blog' | 'pages') => {
     return fileItems.map(file => {
       const isFolder = file.type === 'folder';
       const isExpanded = expandedFolders.has(file.path);
@@ -418,6 +428,82 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
             </Box>
           )}
         </Box>
+
+        {/* Pages Section */}
+        <Box>
+          <HStack
+            py={1.5}
+            px={3}
+            spacing={2}
+            borderRadius="lg"
+            bg="gray.50"
+            cursor="pointer"
+            onClick={() => toggleFolder('pages')}
+            _hover={{ 
+              '& .folder-actions': { opacity: 1 }
+            }}
+            position="relative"
+            role="group"
+          >
+            <HStack flex={1} spacing={3}>
+              <Icon 
+                as={expandedFolders.has('pages') ? FiChevronDown : FiChevronRight} 
+                color="gray.400"
+              />
+              <Icon as={FiFolder} color="purple.400" fontSize="1.1em" />
+              <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                Pages
+              </Text>
+            </HStack>
+            <HStack 
+              spacing={1} 
+              className="folder-actions"
+              opacity={0}
+              transition="all 0.2s"
+              position="absolute"
+              right={2}
+              bg="white"
+              p={1}
+              borderRadius="md"
+              _groupHover={{ opacity: 1, shadow: 'sm' }}
+            >
+              <Tooltip label="New file" openDelay={500}>
+                <IconButton
+                  aria-label="New file"
+                  icon={<FiFileText />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.500"
+                  _hover={{ color: 'blue.500', bg: 'blue.50' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreate('/', 'file', 'pages');
+                  }}
+                />
+              </Tooltip>
+              <Tooltip label="New folder" openDelay={500}>
+                <IconButton
+                  aria-label="New folder"
+                  icon={<FiFolderPlus />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.500"
+                  _hover={{ color: 'blue.500', bg: 'blue.50' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreate('/', 'folder', 'pages');
+                  }}
+                />
+              </Tooltip>
+            </HStack>
+          </HStack>
+          {expandedFolders.has('pages') && (
+            <Box pl={6}>
+              {files.pages.length > 0 ? renderFileTree(files.pages, 'pages') : renderEmptyState()}
+            </Box>
+          )}
+        </Box>
+
       </VStack>
 
       <CreateFileDialog

@@ -21,7 +21,7 @@ interface CreateFileDialogProps {
   onClose: () => void;
   currentPath: string;
   initialType: 'file' | 'folder';
-  contentType: 'docs' | 'blog';
+  contentType: 'docs' | 'blog' | 'pages';
   onFileCreated: () => void;
 }
 

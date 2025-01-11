@@ -12,6 +12,7 @@ const config = {
     return {
       docsDir: `${rootDir}/docs`,
       blogDir: `${rootDir}/blog`,
+      pagesDir: `${rootDir}/src/pages`,
       i18nDir: `${i18nDir}/i18n`,
       mediaDir: `${rootDir}/${mediaDir}`,
     };
