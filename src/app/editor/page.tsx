@@ -69,6 +69,19 @@ export default function HomePage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  async function fetchFiles() {
+    try {
+      const response = await fetch('/api/files');
+      if (!response.ok) {
+        throw new Error('Failed to fetch files');
+      }
+      const data = await response.json();
+      setFiles(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
+  }
+
   const languageMap: Record<string, string> = {
     en: 'English',
     fr: 'Français',
@@ -76,23 +89,11 @@ export default function HomePage() {
     lu: 'Lëtzebuergesch',
   };
 
-  useEffect(() => {
-    async function fetchFiles() {
-      try {
-        const response = await fetch('/api/files');
-        if (!response.ok) {
-          throw new Error('Failed to fetch files');
-        }
-        const data = await response.json();
-        setFiles(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      }
-    }
-
+  useEffect(() => {    
     fetchFiles();
   }, []);
 
+  
   // Separate the language loading into its own effect
   useEffect(() => {
     const savedLanguage = localStorage.getItem(STORAGE_KEYS.CURRENT_LANGUAGE);
@@ -583,6 +584,7 @@ export default function HomePage() {
                         files={files}
                         onFileSelect={handleFileSelect}
                         selectedFile={selectedFile?.path}
+                        onRefresh={fetchFiles}
                       />
                     )}
                   </Box>
