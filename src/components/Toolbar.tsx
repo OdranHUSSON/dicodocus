@@ -10,6 +10,12 @@ import {
   Box,
   VStack,
   useToast,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItemOption,
+  MenuOptionGroup,
+  Progress,
 } from '@chakra-ui/react';
 import {
   FiSave,
@@ -26,7 +32,6 @@ import {
   FiCpu,
 } from 'react-icons/fi';
 import { LanguageSelector } from './LanguageSelector';
-import { TranslateModal } from './TranslateModal';
 import { MediaLibrary } from './MediaLibrary';
 import { editor } from 'monaco-editor';
 import { insertTextAtCursor } from '@/utils/insertTextAtCursor';
@@ -60,7 +65,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   contentType,
   editorInstance
 }) => {
-  const [isTranslateModalOpen, setIsTranslateModalOpen] = useState(false);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [isTranslating, setIsTranslating] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [isAIDrawerOpen, setIsAIDrawerOpen] = useState(false);
@@ -79,6 +85,55 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     } catch (err) {
       // Handle error if needed
       console.error('Error saving:', err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
+  const handleTranslate = async () => {
+    const toastId = toast({
+      title: 'Translation in progress',
+      description: (
+        <Progress size="xs" isIndeterminate />
+      ),
+      status: 'info',
+      duration: null,
+      isClosable: false,
+    });
+
+    setIsTranslating(true);
+    try {
+      const response = await fetch('/api/files/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filePath,
+          sourceLang: currentLanguage,
+          targetLangs: selectedLanguages,
+          contentType,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Translation failed');
+      }
+
+      toast.close(toastId);
+      toast({
+        title: 'Translation complete',
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      toast.close(toastId);
+      toast({
+        title: 'Translation failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        status: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setIsTranslating(false);
     }
   };
 
@@ -148,15 +203,33 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 availableLanguages={availableLanguages}
                 onLanguageChange={onLanguageChange}
               />
-              <Tooltip label="Translate">
-                <IconButton
-                  aria-label="Translate"
-                  icon={<FiGlobe />}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setIsTranslateModalOpen(true)}
-                />
-              </Tooltip>
+              <Menu closeOnSelect={false}>
+                <MenuButton as={Button} size="sm" variant="ghost" leftIcon={<FiGlobe />} isLoading={isTranslating}>
+                  Translate
+                </MenuButton>
+                <MenuList minWidth='240px'>
+                  <MenuOptionGroup type='checkbox' onChange={(values) => setSelectedLanguages(values as string[])}>
+                    {availableLanguages
+                      .filter(lang => lang.code !== currentLanguage)
+                      .map(lang => (
+                        <MenuItemOption key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </MenuItemOption>
+                      ))}
+                  </MenuOptionGroup>
+                  <Button
+                    mt={2}
+                    mx={3}
+                    colorScheme="blue"
+                    onClick={handleTranslate}
+                    isDisabled={selectedLanguages.length === 0}
+                    size="sm"
+                    width="calc(100% - 24px)"
+                  >
+                    Translate
+                  </Button>
+                </MenuList>
+              </Menu>
             </HStack>
           </Box>
 
@@ -251,13 +324,33 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               availableLanguages={availableLanguages}
               onLanguageChange={onLanguageChange}
             />
-            <IconButton
-              aria-label="Translate"
-              icon={<FiGlobe />}
-              size="sm"
-              variant="ghost"
-              onClick={() => setIsTranslateModalOpen(true)}
-            />
+            <Menu closeOnSelect={false}>
+              <MenuButton as={Button} size="sm" variant="ghost" leftIcon={<FiGlobe />} isLoading={isTranslating}>
+                Translate
+              </MenuButton>
+              <MenuList minWidth='240px'>
+                <MenuOptionGroup type='checkbox' onChange={(values) => setSelectedLanguages(values as string[])}>
+                  {availableLanguages
+                    .filter(lang => lang.code !== currentLanguage)
+                    .map(lang => (
+                      <MenuItemOption key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </MenuItemOption>
+                    ))}
+                </MenuOptionGroup>
+                <Button
+                  mt={2}
+                  mx={3}
+                  colorScheme="blue"
+                  onClick={handleTranslate}
+                  isDisabled={selectedLanguages.length === 0}
+                  size="sm"
+                  width="calc(100% - 24px)"
+                >
+                  Translate
+                </Button>
+              </MenuList>
+            </Menu>
           </HStack>
 
           <ButtonGroup size="sm" isAttached variant="outline" width="full">
@@ -288,15 +381,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </ButtonGroup>
         </VStack>
       </Box>
-
-      <TranslateModal
-        isOpen={isTranslateModalOpen}
-        onClose={() => setIsTranslateModalOpen(false)}
-        availableLanguages={availableLanguages}
-        currentLanguage={currentLanguage}
-        filePath={filePath}
-        contentType={contentType}
-      />
 
       <MediaLibrary
         isOpen={isMediaLibraryOpen}

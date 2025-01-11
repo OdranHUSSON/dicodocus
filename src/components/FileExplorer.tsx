@@ -80,6 +80,15 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         duration: 3000,
       });
 
+      // If we deleted the current file, select the first available file
+      if (selectedFile === file.path) {
+        // Try to select first file from any section
+        const firstFile = files.docs[0] || files.blog[0] || files.pages[0];
+        if (firstFile) {
+          onFileSelect({...firstFile, contentType: 'docs'});
+        }
+      }
+
       onRefresh?.();
     } catch (error) {
       toast({

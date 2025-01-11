@@ -23,27 +23,42 @@ export async function DELETE(request: NextRequest) {
     // Remove any leading slash to make the path relative
     const relativePath = cleanPath.replace(/^\//, '')
 
-    // Determine the full path based on language and content type
-    const fullPath = language === DEFAULT_LANG
-      ? path.join(contentType === 'docs' ? docsDir : blogDir, relativePath)
-      : path.join(i18nDir, language, `docusaurus-plugin-content-${contentType}/current`, relativePath)
-
-    // Check if path exists
-    try {
-      await fs.access(fullPath)
-    } catch {
-      return NextResponse.json(
-        { error: 'File or folder not found' },
-        { status: 404 }
+    // Get list of all language directories if deleting default language
+    let pathsToDelete = []
+    if (language === DEFAULT_LANG) {
+      // Add default language path
+      pathsToDelete.push(path.join(contentType === 'docs' ? docsDir : blogDir, relativePath))
+      
+      // Add translated paths
+      try {
+        const langs = await fs.readdir(i18nDir)
+        for (const lang of langs) {
+          pathsToDelete.push(
+            path.join(i18nDir, lang, `docusaurus-plugin-content-${contentType}/current`, relativePath)
+          )
+        }
+      } catch (err) {
+        // Continue if i18n directory doesn't exist
+      }
+    } else {
+      // Just delete the specific language path
+      pathsToDelete.push(
+        path.join(i18nDir, language, `docusaurus-plugin-content-${contentType}/current`, relativePath)
       )
     }
 
-    // Delete the file or directory
-    const stats = await fs.stat(fullPath)
-    if (stats.isDirectory()) {
-      await fs.rm(fullPath, { recursive: true })
-    } else {
-      await fs.unlink(fullPath)
+    // Delete all paths
+    for (const pathToDelete of pathsToDelete) {
+      try {
+        const stats = await fs.stat(pathToDelete)
+        if (stats.isDirectory()) {
+          await fs.rm(pathToDelete, { recursive: true })
+        } else {
+          await fs.unlink(pathToDelete)
+        }
+      } catch (err) {
+        // Skip if file/directory doesn't exist
+      }
     }
 
     return NextResponse.json({ 
