@@ -20,13 +20,75 @@ export function DragDropEditor({ content, onChange, onSave }: DragDropEditorProp
   const [selectedComponent, setSelectedComponent] = React.useState<ComponentInstance | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // Add this effect to update content when components change
+  // Load components from content
   React.useEffect(() => {
-    const generatedCode = generatePageCode({ components });
-    onChange(generatedCode);
+    console.log('Raw content received:', content);
+
+    if (!content) {
+      console.log('No content to parse');
+      return;
+    }
+
+    try {
+      // Split content into lines and look for JSON data
+      const lines = content.split('\n');
+      const loadedComponents: ComponentInstance[] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Look for our component data markers
+        if (line.includes('<!-- COMPONENT_DATA:')) {
+          try {
+            // Extract JSON between markers
+            const jsonStr = line.replace('<!-- COMPONENT_DATA:', '').replace('-->', '').trim();
+            console.log('Found component data:', jsonStr);
+            
+            const componentData = JSON.parse(jsonStr);
+            if (componentData.instanceId && componentData.id && componentData.props) {
+              loadedComponents.push(componentData);
+              console.log('Successfully parsed component:', componentData);
+            }
+          } catch (e) {
+            console.error('Failed to parse component line:', line, e);
+          }
+        }
+      }
+
+      console.log('Total components loaded:', loadedComponents.length);
+      setComponents(loadedComponents);
+      
+    } catch (error) {
+      console.error('Error parsing content:', error);
+    }
+  }, [content]);
+
+  // Generate code with embedded component data
+  React.useEffect(() => {
+    if (components.length === 0) {
+      console.log('No components to generate code for');
+      return;
+    }
+
+    try {
+      const componentMarkers = components.map(comp => {
+        const jsonStr = JSON.stringify(comp);
+        return `<!-- COMPONENT_DATA:${jsonStr}-->`;
+      });
+
+      const generatedCode = `
+${componentMarkers.join('\n')}
+${generatePageCode({ components })}
+      `.trim();
+
+      console.log('Generated code with components:', components.length);
+      onChange(generatedCode);
+    } catch (error) {
+      console.error('Error generating code:', error);
+    }
   }, [components, onChange]);
 
-  // Fetch available components on mount
+  // Fetch available components
   React.useEffect(() => {
     const fetchComponents = async () => {
       try {
@@ -47,7 +109,6 @@ export function DragDropEditor({ content, onChange, onSave }: DragDropEditorProp
   }, []);
 
   const handleDrop = (item: ComponentTemplate) => {
-    // Create a new instance of the component with default props
     const newComponent: ComponentInstance = {
       ...item,
       instanceId: `${item.id}_${Date.now()}`,
@@ -57,7 +118,8 @@ export function DragDropEditor({ content, onChange, onSave }: DragDropEditorProp
       }, {} as Record<string, any>),
     };
     
-    setComponents((prev) => [...prev, newComponent]);
+    console.log('Adding new component:', newComponent);
+    setComponents(prev => [...prev, newComponent]);
   };
 
   const handleComponentSelect = (component: ComponentInstance) => {
@@ -65,29 +127,26 @@ export function DragDropEditor({ content, onChange, onSave }: DragDropEditorProp
   };
 
   const handlePropertyChange = (componentId: string, propName: string, value: any) => {
-    setComponents((prev) =>
-      prev.map((comp) =>
+    setComponents(prev =>
+      prev.map(comp =>
         comp.instanceId === componentId
           ? { ...comp, props: { ...comp.props, [propName]: value } }
           : comp
       )
     );
     
-    // Update selected component if it's the one being modified
     if (selectedComponent?.instanceId === componentId) {
-      setSelectedComponent((prev) => 
+      setSelectedComponent(prev => 
         prev ? { ...prev, props: { ...prev.props, [propName]: value } } : null
       );
     }
   };
 
-  // Add save handler
   const handleSave = React.useCallback(() => {
     const generatedCode = generatePageCode({ components });
     onSave(generatedCode);
   }, [components, onSave]);
 
-  // Add keyboard shortcut for saving
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 's') {
