@@ -215,30 +215,79 @@ const Dashboard = () => {
 
         {/* Docusaurus Status */}
         <VStack
-          bg="white"
-          borderRadius="lg"
-          shadow="sm"
-          p={6}
+          bg="rgba(255, 255, 255, 0.95)"
+          borderRadius="2xl"
+          shadow="xl"
+          p={8}
           align="stretch"
-          spacing={6}
+          spacing={8}
+          backdropFilter="blur(10px)"
+          border="1px solid rgba(255, 255, 255, 0.18)"
+          _hover={{
+            transform: "translateY(-2px)",
+            transition: "all 0.2s ease-in-out"
+          }}
         >
-          <Text fontSize="lg" color="gray.600">
+          <Text 
+            fontSize="xl" 
+            color="gray.800"
+            fontWeight="medium"
+            letterSpacing="tight"
+          >
             Docusaurus Status
           </Text>
-          <HStack justify="space-between">
-            <VStack align="start">
-              <Text fontSize="md" fontWeight="bold" color="gray.700">
-                Local
+          <HStack 
+            justify="space-between"
+            px={4}
+          >
+            <VStack 
+              align="center"
+              bg="gray.50" 
+              p={6}
+              borderRadius="xl"
+              flex={1}
+              spacing={4}
+              transition="all 0.2s"
+              _hover={{ bg: "gray.100" }}
+            >
+              <Text fontSize="lg" fontWeight="semibold" color="gray.800">
+                Local Environment
               </Text>
-              <Badge colorScheme={docusaurusStatus.local === 'running' ? 'green' : 'red'}>
+              <Badge
+                fontSize="md"
+                py={2}
+                px={4}
+                borderRadius="full"
+                textTransform="capitalize"
+                bg={docusaurusStatus.local === 'running' ? 'green.100' : 'red.100'}
+                color={docusaurusStatus.local === 'running' ? 'green.700' : 'red.700'}
+              >
                 {docusaurusStatus.local}
               </Badge>
             </VStack>
-            <VStack align="start">
-              <Text fontSize="md" fontWeight="bold" color="gray.700">
+
+            <VStack 
+              align="center"
+              bg="gray.50"
+              p={6} 
+              borderRadius="xl"
+              flex={1}
+              spacing={4}
+              transition="all 0.2s"
+              _hover={{ bg: "gray.100" }}
+            >
+              <Text fontSize="lg" fontWeight="semibold" color="gray.800">
                 Production
               </Text>
-              <Badge colorScheme={docusaurusStatus.production === 'running' ? 'green' : 'red'}>
+              <Badge
+                fontSize="md"
+                py={2}
+                px={4}
+                borderRadius="full"
+                textTransform="capitalize"
+                bg={docusaurusStatus.production === 'running' ? 'green.100' : 'red.100'}
+                color={docusaurusStatus.production === 'running' ? 'green.700' : 'red.700'}
+              >
                 {docusaurusStatus.production}
               </Badge>
             </VStack>
