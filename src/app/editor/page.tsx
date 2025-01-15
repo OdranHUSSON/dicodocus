@@ -708,7 +708,7 @@ export default function HomePage() {
                         ) : (
                           <ReactMarkdown
                             components={ChakraUIRenderer(markdownTheme)} 
-                            remarkPlugins={[remarkGfm, remarkFrontmatter]}
+                            remarkPlugins={[ remarkFrontmatter]}
                             skipHtml
                           >
                             {fileContent}
