@@ -1,26 +1,32 @@
-'use client'
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Box, HStack, Text, useToast, VStack, IconButton, Tabs, TabList, TabPanel, TabPanels, Tab } from '@chakra-ui/react';
-import { FileExplorer, FileItem } from '@/components/FileExplorer';
-import { Toolbar } from '@/components/Toolbar';
-import Editor from '@monaco-editor/react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkFrontmatter from 'remark-frontmatter';
-import ChakraUIRenderer, {  defaults } from 'chakra-ui-markdown-renderer';
-import { theme } from '@chakra-ui/react';
-import { HamburgerIcon, CloseIcon, RepeatIcon } from '@chakra-ui/icons';
-import { editor } from 'monaco-editor';
-import { uploadImageFromClipboard } from '@/utils/uploadImageFromClipboard';
-import * as monaco from 'monaco-editor';
-import { MissingTranslations } from '@/components/MissingTranslations';
-import { MarkdownEditor } from '@/components/MarkdownEditor';
-import { DragDropEditor } from '@/components/DragDropEditor';
-import { v4 as uuidv4 } from 'uuid';
-import remarkBreaks from 'remark-breaks';
+import { FileExplorer, FileItem } from "@/components/FileExplorer";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { MissingTranslations } from "@/components/MissingTranslations";
+import { Toolbar } from "@/components/Toolbar";
+import { CloseIcon, HamburgerIcon, RepeatIcon } from "@chakra-ui/icons";
+import {
+  Box,
+  HStack,
+  IconButton,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
+  Text,
+  useToast,
+  VStack,
+} from "@chakra-ui/react";
+import ChakraUIRenderer, { defaults } from "chakra-ui-markdown-renderer";
+import * as monaco from "monaco-editor";
+import { editor } from "monaco-editor";
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkFrontmatter from "remark-frontmatter";
+import { v4 as uuidv4 } from "uuid";
 
-type ViewMode = 'edit' | 'preview' | 'split';
+type ViewMode = "edit" | "preview" | "split";
 
 interface Language {
   code: string;
@@ -32,69 +38,75 @@ type ToastError = Error | { message: string };
 
 // Add these constants at the top of the file
 const STORAGE_KEYS = {
-  SELECTED_FILE: 'docs-editor-selected-file',
-  VIEW_MODE: 'docs-editor-view-mode',
-  CURRENT_LANGUAGE: 'docs-editor-language',
-  SIDEBAR_STATE: 'docs-editor-sidebar-state'
+  SELECTED_FILE: "docs-editor-selected-file",
+  VIEW_MODE: "docs-editor-view-mode",
+  CURRENT_LANGUAGE: "docs-editor-language",
+  SIDEBAR_STATE: "docs-editor-sidebar-state",
 };
 
 const AVAILABLE_LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'lu', name: 'Luxembourgish' },
+  { code: "en", name: "English" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "lu", name: "Luxembourgish" },
 ];
 
 // Add these image types at the top with your other constants
 const SUPPORTED_IMAGE_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  'image/bmp',
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+  "image/bmp",
 ];
 
 export default function HomePage() {
-  const [files, setFiles] = useState<{ docs: FileItem[], blog: FileItem[], pages: FileItem[] }>({ docs: [], blog: [], pages: [] });
+  const [files, setFiles] = useState<{
+    docs: FileItem[];
+    blog: FileItem[];
+    pages: FileItem[];
+  }>({ docs: [], blog: [], pages: [] });
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
-  const [fileContent, setFileContent] = useState<string>('');
-  const [viewMode, setViewMode] = useState<ViewMode>('split');
-  const [currentLanguage, setCurrentLanguage] = useState('');
+  const [fileContent, setFileContent] = useState<string>("");
+  const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const [currentLanguage, setCurrentLanguage] = useState("");
   const [availableLanguages, setAvailableLanguages] = useState<Language[]>([]);
-  const [contentLanguage, setContentLanguage] = useState<string>('en');
+  const [contentLanguage, setContentLanguage] = useState<string>("en");
   const toast = useToast();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [editorInstance, setEditorInstance] = useState<editor.IStandaloneCodeEditor | null>(null);
+  const [editorInstance, setEditorInstance] =
+    useState<editor.IStandaloneCodeEditor | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   async function fetchFiles() {
     try {
-      const response = await fetch('/api/files');
+      const response = await fetch("/api/files");
       if (!response.ok) {
-        throw new Error('Failed to fetch files');
+        throw new Error("Failed to fetch files");
       }
       const data = await response.json();
       setFiles(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
     }
   }
 
   const languageMap: Record<string, string> = {
-    en: 'English',
-    fr: 'Français',
-    de: 'Deutsch',
-    lu: 'Lëtzebuergesch',
+    en: "English",
+    fr: "Français",
+    de: "Deutsch",
+    lu: "Lëtzebuergesch",
   };
 
-  useEffect(() => {    
+  useEffect(() => {
     fetchFiles();
   }, []);
 
-  
   // Separate the language loading into its own effect
   useEffect(() => {
     const savedLanguage = localStorage.getItem(STORAGE_KEYS.CURRENT_LANGUAGE);
@@ -109,7 +121,9 @@ export default function HomePage() {
     if (!isInitialized) return;
 
     // Load view mode
-    const savedViewMode = localStorage.getItem(STORAGE_KEYS.VIEW_MODE) as ViewMode;
+    const savedViewMode = localStorage.getItem(
+      STORAGE_KEYS.VIEW_MODE
+    ) as ViewMode;
     if (savedViewMode) {
       setViewMode(savedViewMode);
     }
@@ -117,7 +131,7 @@ export default function HomePage() {
     // Load sidebar state
     const savedSidebarState = localStorage.getItem(STORAGE_KEYS.SIDEBAR_STATE);
     if (savedSidebarState !== null) {
-      setSidebarOpen(savedSidebarState === 'true');
+      setSidebarOpen(savedSidebarState === "true");
     }
 
     // Load saved file
@@ -127,7 +141,7 @@ export default function HomePage() {
         const fileData = JSON.parse(savedFile);
         handleFileSelect(fileData);
       } catch (error) {
-        console.error('Error loading saved file:', error);
+        console.error("Error loading saved file:", error);
       }
     }
   }, [isInitialized, currentLanguage]); // Depend on initialization and language
@@ -150,7 +164,10 @@ export default function HomePage() {
   // Save selected file changes
   useEffect(() => {
     if (selectedFile) {
-      localStorage.setItem(STORAGE_KEYS.SELECTED_FILE, JSON.stringify(selectedFile));
+      localStorage.setItem(
+        STORAGE_KEYS.SELECTED_FILE,
+        JSON.stringify(selectedFile)
+      );
     }
   }, [selectedFile]);
 
@@ -160,17 +177,19 @@ export default function HomePage() {
     if (!file) {
       localStorage.removeItem(STORAGE_KEYS.SELECTED_FILE);
       setSelectedFile(null);
-      setFileContent('');
+      setFileContent("");
       return;
     }
 
-    if (file.type === 'file') {
+    if (file.type === "file") {
       try {
         const response = await fetch(
-          `/api/files/content?path=${encodeURIComponent(file.path)}&lang=${currentLanguage}&contentType=${file.contentType}`
+          `/api/files/content?path=${encodeURIComponent(
+            file.path
+          )}&lang=${currentLanguage}&contentType=${file.contentType}`
         );
 
-        if (!response.ok) throw new Error('Failed to fetch file content');
+        if (!response.ok) throw new Error("Failed to fetch file content");
 
         const data = await response.json();
         setFileContent(data.content);
@@ -184,12 +203,11 @@ export default function HomePage() {
 
         // Update state atomically after everything is fetched
         setSelectedFile(file);
-
       } catch (err) {
         toast({
-          title: 'Error loading file',
+          title: "Error loading file",
           description: (err as ToastError).message,
-          status: 'error',
+          status: "error",
           duration: 3000,
         });
       }
@@ -204,10 +222,10 @@ export default function HomePage() {
     const filePath = selectedFile.path; // Snapshot of selected file path
 
     try {
-      const response = await fetch('/api/files/save', {
-        method: 'POST',
+      const response = await fetch("/api/files/save", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           path: filePath, // Ensure this references the correct file
@@ -218,8 +236,10 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to save file' }));
-        throw new Error(errorData.message || 'Failed to save file');
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Failed to save file" }));
+        throw new Error(errorData.message || "Failed to save file");
       }
 
       const data = await response.json();
@@ -233,18 +253,21 @@ export default function HomePage() {
       );
 
       toast({
-        title: 'Success',
+        title: "Success",
         description: `File "${selectedFile.name}" saved successfully`,
-        status: 'success',
+        status: "success",
         duration: 3000,
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred while saving';
-      console.error('Save error:', errorMessage);
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "An unknown error occurred while saving";
+      console.error("Save error:", errorMessage);
       toast({
-        title: 'Error saving file',
+        title: "Error saving file",
         description: errorMessage,
-        status: 'error',
+        status: "error",
         duration: 3000,
       });
     }
@@ -253,23 +276,28 @@ export default function HomePage() {
   // Ensure editor updates are consistent
   useEffect(() => {
     if (editorInstance) {
-      editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-        const currentContent = editorInstance.getValue();
-        handleSave(currentContent);
-      });
+      editorInstance.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+        () => {
+          const currentContent = editorInstance.getValue();
+          handleSave(currentContent);
+        }
+      );
     }
   }, [selectedFile, editorInstance]);
 
   const handleLanguageChange = async (lang: string) => {
     if (!selectedFile) return;
-    
+
     try {
       const response = await fetch(
-        `/api/files/content?path=${encodeURIComponent(selectedFile.path)}&lang=${lang}&contentType=${selectedFile.contentType}`
+        `/api/files/content?path=${encodeURIComponent(
+          selectedFile.path
+        )}&lang=${lang}&contentType=${selectedFile.contentType}`
       );
-      
-      if (!response.ok) throw new Error('Failed to fetch translation');
-      
+
+      if (!response.ok) throw new Error("Failed to fetch translation");
+
       const data = await response.json();
       setFileContent(data.content);
       setCurrentLanguage(lang);
@@ -283,9 +311,9 @@ export default function HomePage() {
       );
     } catch (err) {
       toast({
-        title: 'Language switch failed',
+        title: "Language switch failed",
         description: (err as ToastError).message,
-        status: 'error',
+        status: "error",
         duration: 3000,
       });
     }
@@ -312,32 +340,40 @@ export default function HomePage() {
     },
     img: (props: any) => {
       const { src, alt } = props;
-      const imageSrc = src.startsWith('http') ? src : `${process.env.NEXT_PUBLIC_DOCUSAURUS_URL}${src}`;
-      return <img src={imageSrc} alt={alt} style={{ maxWidth: '100%' }} />;
+      const imageSrc = src.startsWith("http")
+        ? src
+        : `${process.env.NEXT_PUBLIC_DOCUSAURUS_URL}${src}`;
+      return <img src={imageSrc} alt={alt} style={{ maxWidth: "100%" }} />;
     },
     table: (props: any) => {
       return (
         <Box overflowX="auto" my={4}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>{props.children}</table>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            {props.children}
+          </table>
         </Box>
       );
     },
     th: (props: any) => (
-      <th style={{ 
-        borderWidth: '1px', 
-        borderColor: 'inherit', 
-        padding: '0.5rem', 
-        backgroundColor: 'gray.50' 
-      }}>
+      <th
+        style={{
+          borderWidth: "1px",
+          borderColor: "inherit",
+          padding: "0.5rem",
+          backgroundColor: "gray.50",
+        }}
+      >
         {props.children}
       </th>
     ),
     td: (props: any) => (
-      <td style={{ 
-        borderWidth: '1px', 
-        borderColor: 'inherit', 
-        padding: '0.5rem' 
-      }}>
+      <td
+        style={{
+          borderWidth: "1px",
+          borderColor: "inherit",
+          padding: "0.5rem",
+        }}
+      >
         {props.children}
       </td>
     ),
@@ -345,13 +381,13 @@ export default function HomePage() {
 
   const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor) => {
     setEditorInstance(editor);
-    
+
     // Update the command handler to use a closure that captures the current language
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const currentContent = editor.getValue();
       handleSave(currentContent);
     });
-    
+
     // Create a paste handler that first checks for images
     editor.onKeyDown((e: any) => {
       if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.KeyV) {
@@ -366,60 +402,69 @@ export default function HomePage() {
       let hasHandledImage = false;
 
       for (const item of clipboardItems) {
-        const imageType = item.types.find(type => SUPPORTED_IMAGE_TYPES.includes(type));
-        
+        const imageType = item.types.find((type) =>
+          SUPPORTED_IMAGE_TYPES.includes(type)
+        );
+
         if (imageType) {
           hasHandledImage = true;
           const blob = await item.getType(imageType);
-          const fileExtension = imageType.split('/')[1];
+          const fileExtension = imageType.split("/")[1];
           const uuid = uuidv4();
           const fileName = `${uuid}.${fileExtension}`;
 
           // Create form data with additional metadata
           const formData = new FormData();
-          formData.append('file', new File([blob], fileName, { type: imageType }));
-          formData.append('description', 'Pasted image'); // Default description
-          
-          const response = await fetch('/api/media', {
-            method: 'POST',
+          formData.append(
+            "file",
+            new File([blob], fileName, { type: imageType })
+          );
+          formData.append("description", "Pasted image"); // Default description
+
+          const response = await fetch("/api/media", {
+            method: "POST",
             body: formData,
           });
-          
+
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Upload failed');
+            throw new Error(errorData.error || "Upload failed");
           }
-          
+
           const data = await response.json();
-          
+
           // Insert markdown at current selection or cursor position
           const selection = editor.getSelection();
           const imageMarkdown = `![${data.name}](${data.path})`;
-          
+
           if (selection) {
-            editor.executeEdits('', [{
-              range: selection,
-              text: imageMarkdown,
-            }]);
+            editor.executeEdits("", [
+              {
+                range: selection,
+                text: imageMarkdown,
+              },
+            ]);
           } else {
             const position = editor.getPosition();
             if (position) {
-              editor.executeEdits('', [{
-                range: {
-                  startLineNumber: position.lineNumber,
-                  startColumn: position.column,
-                  endLineNumber: position.lineNumber,
-                  endColumn: position.column,
+              editor.executeEdits("", [
+                {
+                  range: {
+                    startLineNumber: position.lineNumber,
+                    startColumn: position.column,
+                    endLineNumber: position.lineNumber,
+                    endColumn: position.column,
+                  },
+                  text: imageMarkdown,
                 },
-                text: imageMarkdown,
-              }]);
+              ]);
             }
           }
 
           toast({
-            title: 'Image uploaded successfully',
+            title: "Image uploaded successfully",
             description: `Saved as ${data.name}`,
-            status: 'success',
+            status: "success",
             duration: 3000,
           });
           break;
@@ -430,13 +475,13 @@ export default function HomePage() {
         return true; // Allow default paste behavior
       }
       return false; // Prevent default paste behavior
-      
     } catch (error) {
-      console.error('Paste error:', error);
+      console.error("Paste error:", error);
       toast({
-        title: 'Upload failed',
-        description: error instanceof Error ? error.message : 'Failed to upload image',
-        status: 'error',
+        title: "Upload failed",
+        description:
+          error instanceof Error ? error.message : "Failed to upload image",
+        status: "error",
         duration: 3000,
       });
       return true; // Allow default paste on error
@@ -453,7 +498,7 @@ export default function HomePage() {
 
   // Optional: Add this to your error handlers to clear state when something goes wrong
   const handleError = (error: any) => {
-    console.error('Error:', error);
+    console.error("Error:", error);
     clearEditorState();
     // ... handle error ...
   };
@@ -466,10 +511,14 @@ export default function HomePage() {
   }, [currentLanguage]); // Dependency on currentLanguage
 
   // Add this helper function
-  const handleMissingTranslationSelect = async (filePath: string, contentType: 'docs' | 'blog') => {
+  const handleMissingTranslationSelect = async (
+    filePath: string,
+    contentType: "docs" | "blog"
+  ) => {
     const findFile = (items: FileItem[]): FileItem | null => {
       for (const item of items) {
-        if (item.path === filePath && item.contentType === contentType) return item;
+        if (item.path === filePath && item.contentType === contentType)
+          return item;
         if (item.children) {
           const found = findFile(item.children);
           if (found) return found;
@@ -478,7 +527,7 @@ export default function HomePage() {
       return null;
     };
 
-    const file = findFile(contentType === 'docs' ? files.docs : files.blog);
+    const file = findFile(contentType === "docs" ? files.docs : files.blog);
     if (file) {
       await handleFileSelect(file);
     }
@@ -487,37 +536,41 @@ export default function HomePage() {
   // Add this effect to update the save command when language changes
   useEffect(() => {
     if (editorInstance) {
-      editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-        const currentContent = editorInstance.getValue();
-        handleSave(currentContent);
-      });
+      editorInstance.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+        () => {
+          const currentContent = editorInstance.getValue();
+          handleSave(currentContent);
+        }
+      );
     }
   }, [currentLanguage, editorInstance]);
 
   const refreshFiles = async () => {
     setIsRefreshing(true);
     try {
-      const response = await fetch('/api/files');
+      const response = await fetch("/api/files");
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.details || 'Failed to fetch files');
+        throw new Error(errorData.details || "Failed to fetch files");
       }
       const data = await response.json();
       setFiles(data);
       setError(null); // Clear any existing errors
       toast({
-        title: 'Files refreshed',
-        status: 'success',
+        title: "Files refreshed",
+        status: "success",
         duration: 2000,
         isClosable: true,
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      const errorMessage =
+        err instanceof Error ? err.message : "An unknown error occurred";
       setError(errorMessage);
       toast({
-        title: 'Error refreshing files',
+        title: "Error refreshing files",
         description: errorMessage,
-        status: 'error',
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
@@ -567,7 +620,10 @@ export default function HomePage() {
           display="flex"
           flexDir="column"
           overflow="hidden"
-          transform={{ base: isSidebarOpen ? "translateX(0)" : "translateX(-100%)", md: "none" }}
+          transform={{
+            base: isSidebarOpen ? "translateX(0)" : "translateX(-100%)",
+            md: "none",
+          }}
           transition="transform 0.3s ease"
         >
           <Box
@@ -580,7 +636,7 @@ export default function HomePage() {
               Documentation & Blog
             </Text>
           </Box>
-          
+
           {/* Add tabs for Files and Missing Translations */}
           <Box>
             <Tabs size="sm" variant="soft-rounded" colorScheme="blue" p={2}>
@@ -592,7 +648,9 @@ export default function HomePage() {
                 <TabPanel p={0}>
                   <Box flex={1} overflowY="auto" maxH="calc(100vh - 160px)">
                     <HStack p={2} justify="space-between">
-                      <Text fontSize="sm" color="gray.600">Files</Text>
+                      <Text fontSize="sm" color="gray.600">
+                        Files
+                      </Text>
                       <IconButton
                         icon={<RepeatIcon />}
                         size="sm"
@@ -620,12 +678,12 @@ export default function HomePage() {
                     <MissingTranslations
                       onFileSelect={handleMissingTranslationSelect}
                       availableLanguages={AVAILABLE_LANGUAGES}
-                      contentType='docs'
+                      contentType="docs"
                     />
                     <MissingTranslations
                       onFileSelect={handleMissingTranslationSelect}
                       availableLanguages={AVAILABLE_LANGUAGES}
-                      contentType='blog'
+                      contentType="blog"
                     />
                   </Box>
                 </TabPanel>
@@ -668,63 +726,62 @@ export default function HomePage() {
                 setFiles={setFiles}
               />
               <Box flex={1} w="full" display="flex">
-                {(viewMode === 'edit' || viewMode === 'split') && (
-                  selectedFile?.contentType === 'pages' ? (
-                    <DragDropEditor
-                      content={fileContent}
-                      onChange={setFileContent}
-                      onSave={handleSave}
-                    />
-                  ) : (
-                    <MarkdownEditor
-                      content={fileContent}
-                      onChange={setFileContent}
-                      onSave={handleSave}
-                      viewMode={viewMode}
-                      onEditorMount={handleEditorDidMount}
-                    />
-                  )
+                {(viewMode === "edit" || viewMode === "split") && (
+                  <MarkdownEditor
+                    content={fileContent}
+                    onChange={setFileContent}
+                    onSave={handleSave}
+                    viewMode={viewMode}
+                    onEditorMount={handleEditorDidMount}
+                  />
                 )}
-                {(viewMode === 'preview' || viewMode === 'split') && (
-                  <Box 
-                    w={viewMode === 'split' ? '50%' : 'full'}
+                {(viewMode === "preview" || viewMode === "split") && (
+                  <Box
+                    w={viewMode === "split" ? "50%" : "full"}
                     height="calc(100vh - 112px)"
                     overflowY="auto"
-                    borderLeftWidth={viewMode === 'split' ? '1px' : undefined}
+                    borderLeftWidth={viewMode === "split" ? "1px" : undefined}
                     borderColor="gray.200"
                   >
-                    <Box p={8} maxW={viewMode === 'preview' ? '800px' : undefined} mx="auto" height="100%">
-                      {selectedFile?.contentType && (
-                        currentLanguage === process.env.NEXT_PUBLIC_DOCUSAURUS_DEFAULT_LANG ? (
+                    <Box
+                      p={8}
+                      maxW={viewMode === "preview" ? "800px" : undefined}
+                      mx="auto"
+                      height="100%"
+                    >
+                      {selectedFile?.contentType &&
+                        (currentLanguage ===
+                        process.env.NEXT_PUBLIC_DOCUSAURUS_DEFAULT_LANG ? (
                           <iframe
-                            src={`${process.env.NEXT_PUBLIC_DOCUSAURUS_URL}/${selectedFile.contentType}/${selectedFile.path.replace('.md', '')}`}
+                            src={`${process.env.NEXT_PUBLIC_DOCUSAURUS_URL}/${
+                              selectedFile.contentType
+                            }/${selectedFile.path.replace(".md", "")}`}
                             style={{
-                              width: '100%',
-                              height: 'calc(100vh - 160px)', // Account for padding and toolbar
-                              border: 'none',
-                              display: 'block' // Prevent inline spacing issues
+                              width: "100%",
+                              height: "calc(100vh - 160px)", // Account for padding and toolbar
+                              border: "none",
+                              display: "block", // Prevent inline spacing issues
                             }}
                           />
                         ) : (
                           <ReactMarkdown
-                            components={ChakraUIRenderer(markdownTheme)} 
-                            remarkPlugins={[ remarkFrontmatter]}
+                            components={ChakraUIRenderer(markdownTheme)}
+                            remarkPlugins={[remarkFrontmatter]}
                             skipHtml
                           >
                             {fileContent}
                           </ReactMarkdown>
-                        )
-                      )}
+                        ))}
                     </Box>
                   </Box>
                 )}
               </Box>
             </>
           ) : (
-            <Box 
-              flex={1} 
-              display="flex" 
-              alignItems="center" 
+            <Box
+              flex={1}
+              display="flex"
+              alignItems="center"
               justifyContent="center"
               bg="gray.50"
             >
@@ -753,18 +810,22 @@ export default function HomePage() {
         justifyContent="space-between"
       >
         <Text fontSize="xs" color="gray.600">
-          {selectedFile ? `${selectedFile.path} - ${selectedFile.contentType === 'docs' ? 'Documentation' : 'Blog'}` : 'Ready'}
+          {selectedFile
+            ? `${selectedFile.path} - ${
+                selectedFile.contentType === "docs" ? "Documentation" : "Blog"
+              }`
+            : "Ready"}
           {selectedFile && currentLanguage !== contentLanguage && (
             <Text as="span" color="orange.500" ml={2}>
-              (Viewing {languageMap[contentLanguage]} version - {languageMap[currentLanguage]} translation not available)
+              (Viewing {languageMap[contentLanguage]} version -{" "}
+              {languageMap[currentLanguage]} translation not available)
             </Text>
           )}
         </Text>
         <Text fontSize="xs" color="gray.600">
-          {viewMode === 'preview' ? 'Preview Mode' : 'Edit Mode'}
+          {viewMode === "preview" ? "Preview Mode" : "Edit Mode"}
         </Text>
       </Box>
     </Box>
   );
 }
-
