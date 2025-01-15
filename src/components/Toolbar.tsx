@@ -24,9 +24,6 @@ import {
   FiEye,
   FiImage,
   FiLink,
-  FiBold,
-  FiItalic,
-  FiList,
   FiGlobe,
   FiMenu,
   FiCpu,
@@ -37,6 +34,14 @@ import { editor } from 'monaco-editor';
 import { insertTextAtCursor } from '@/utils/insertTextAtCursor';
 import { AIDrawer } from './AIDrawer';
 
+/** Example of your FileItem interface */
+interface FileItem {
+  name: string;
+  type: 'file' | 'folder';
+  path: string;
+  children?: FileItem[];
+  contentType: 'docs' | 'blog' | 'pages';
+}
 
 export type ViewMode = 'edit' | 'preview' | 'split';
 
@@ -51,6 +56,8 @@ export interface ToolbarProps {
   filePath: string;
   contentType: 'docs' | 'blog' | 'pages';
   editorInstance: editor.IStandaloneCodeEditor | null;
+  files: { docs: FileItem[]; blog: FileItem[]; pages: FileItem[] };
+  setFiles: Dispatch<SetStateAction<{ docs: FileItem[]; blog: FileItem[]; pages: FileItem[] }>>;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -63,7 +70,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onLanguageChange,
   filePath,
   contentType,
-  editorInstance
+  editorInstance,
+  files,
+  setFiles,
 }) => {
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -71,7 +80,30 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [isAIDrawerOpen, setIsAIDrawerOpen] = useState(false);
   const [selectedText, setSelectedText] = useState('');
+  const [isLinkJuicing, setIsLinkJuicing] = useState(false); // NEW state for link juice
+
   const toast = useToast();
+
+  // Example utility to gather all file paths from docs/blog/pages.
+  const gatherAllFilePaths = () => {
+    const paths: string[] = [];
+
+    const traverse = (items: FileItem[]) => {
+      for (const item of items) {
+        if (item.type === 'file') {
+          paths.push(item.path);
+        } else if (item.children) {
+          traverse(item.children);
+        }
+      }
+    };
+
+    traverse(files.docs);
+    traverse(files.blog);
+    traverse(files.pages);
+
+    return paths;
+  };
 
   const handleImageSelect = (path: string) => {
     const imageMarkdown = `![](${path})\n`;
@@ -83,7 +115,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     try {
       await onSave();
     } catch (err) {
-      // Handle error if needed
       console.error('Error saving:', err instanceof Error ? err.message : 'Unknown error');
     }
   };
@@ -91,9 +122,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const handleTranslate = async () => {
     const toastId = toast({
       title: 'Translation in progress',
-      description: (
-        <Progress size="xs" isIndeterminate />
-      ),
+      description: <Progress size="xs" isIndeterminate />,
       status: 'info',
       duration: null,
       isClosable: false,
@@ -103,9 +132,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     try {
       const response = await fetch('/api/files/translate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           filePath,
           sourceLang: currentLanguage,
@@ -137,15 +164,66 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     }
   };
 
+  /**
+   * Handle Link Juicing (multi-language version)
+   * - We include "lang" (currentLanguage), "contentType", and optionally "filePath" to let the server
+   *   pick the right language config from linkjuice.json (e.g. "en" or "fr")
+   */
+  /**
+ * Handle Link Juicing (multi-language version)
+ * - We include "lang" (currentLanguage) and "contentType", so the server
+ *   can pick the right language config from linkjuice.json (e.g. "en" or "fr").
+ */
+  const handleLinkJuice = async () => {
+    // Show some loading indicator, optional
+    setIsLinkJuicing(true);
+    try {
+      const response = await fetch('/api/linkjuice', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lang: currentLanguage,       // e.g. "en", "fr", etc.
+          filePath,                   // e.g. "my-post.md"
+          contentType,                // e.g. "blog"
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`LinkJuice failed with status ${response.status}`);
+      }
+  
+      const data = await response.json();
+      console.log('LinkJuice success:', data);
+  
+      toast({
+        title: 'LinkJuice complete',
+        description: `File ${filePath} was transformed.`,
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (err) {
+      console.error('LinkJuice error:', err);
+      toast({
+        title: 'LinkJuice error',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        status: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setIsLinkJuicing(false);
+    }
+  };
+
+
   const handleAIClick = () => {
     if (!editorInstance) return;
 
     const selection = editorInstance.getSelection();
     const model = editorInstance.getModel();
-    
+
     if (!model) return;
 
-    // Cas 1: Texte sélectionné
+    // Case 1: Selected text
     if (selection && !selection.isEmpty()) {
       const selectedText = model.getValueInRange(selection);
       if (selectedText.trim()) {
@@ -155,7 +233,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       }
     }
 
-    // Cas 2: Curseur sur une ligne
+    // Case 2: Cursor on a line
     const position = editorInstance.getPosition();
     if (position) {
       const lineContent = model.getLineContent(position.lineNumber);
@@ -166,7 +244,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       }
     }
 
-    // Cas 3: Aucune sélection - ouvrir quand même le drawer
+    // Case 3: Nothing found, open AI drawer anyway
     setSelectedText('');
     setIsAIDrawerOpen(true);
   };
@@ -185,6 +263,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         w="full"
       >
         <HStack spacing={3} overflow="hidden">
+          {/* Save Button */}
           <Tooltip label="Save (⌘S)">
             <IconButton
               aria-label="Save"
@@ -195,6 +274,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             />
           </Tooltip>
           
+          {/* Language & Translation */}
           <Box display={{ base: 'none', md: 'flex' }}>
             <HStack spacing={3}>
               <Divider orientation="vertical" h="24px" />
@@ -204,14 +284,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 onLanguageChange={onLanguageChange}
               />
               <Menu closeOnSelect={false}>
-                <MenuButton as={Button} size="sm" variant="ghost" leftIcon={<FiGlobe />} isLoading={isTranslating}>
+                <MenuButton
+                  as={Button}
+                  size="sm"
+                  variant="ghost"
+                  leftIcon={<FiGlobe />}
+                  isLoading={isTranslating}
+                >
                   Translate
                 </MenuButton>
-                <MenuList minWidth='240px'>
-                  <MenuOptionGroup type='checkbox' onChange={(values) => setSelectedLanguages(values as string[])}>
+                <MenuList minWidth="240px">
+                  <MenuOptionGroup
+                    type="checkbox"
+                    onChange={(values) => setSelectedLanguages(values as string[])}
+                  >
                     {availableLanguages
-                      .filter(lang => lang.code !== currentLanguage)
-                      .map(lang => (
+                      .filter((lang) => lang.code !== currentLanguage)
+                      .map((lang) => (
                         <MenuItemOption key={lang.code} value={lang.code}>
                           {lang.name}
                         </MenuItemOption>
@@ -233,6 +322,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </HStack>
           </Box>
 
+          {/* Link Juice Button (Multi-lang aware) */}
+          <Tooltip label="Link Juice">
+            <IconButton
+              aria-label="Link Juice"
+              icon={<FiLink />}
+              size="sm"
+              variant="ghost"
+              onClick={handleLinkJuice}
+              isLoading={isLinkJuicing}
+            />
+          </Tooltip>
+
+          {/* AI Assist */}
           <Tooltip label="AI Assist (⌘⇧A)">
             <IconButton
               aria-label="AI Assist"
@@ -244,6 +346,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </Tooltip>
         </HStack>
 
+        {/* Filename */}
         <Text 
           fontSize="sm" 
           color="gray.600" 
@@ -253,6 +356,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           {fileName}
         </Text>
 
+        {/* View Mode (Edit | Split | Preview) */}
         <ButtonGroup 
           size="sm" 
           isAttached 
@@ -285,6 +389,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </Button>
         </ButtonGroup>
 
+        {/* Insert Image */}
         <Tooltip label="Insert Image">
           <IconButton
             aria-label="Insert Image"
@@ -295,6 +400,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         </Tooltip>
 
+        {/* Mobile Menu */}
         <IconButton
           aria-label="Open menu"
           icon={<FiMenu />}
@@ -305,6 +411,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         />
       </HStack>
 
+      {/* Mobile Menu Content */}
       <Box
         display={{ base: isMenuOpen ? 'block' : 'none', md: 'none' }}
         w="full"
@@ -325,14 +432,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               onLanguageChange={onLanguageChange}
             />
             <Menu closeOnSelect={false}>
-              <MenuButton as={Button} size="sm" variant="ghost" leftIcon={<FiGlobe />} isLoading={isTranslating}>
+              <MenuButton
+                as={Button}
+                size="sm"
+                variant="ghost"
+                leftIcon={<FiGlobe />}
+                isLoading={isTranslating}
+              >
                 Translate
               </MenuButton>
-              <MenuList minWidth='240px'>
-                <MenuOptionGroup type='checkbox' onChange={(values) => setSelectedLanguages(values as string[])}>
+              <MenuList minWidth="240px">
+                <MenuOptionGroup
+                  type="checkbox"
+                  onChange={(values) => setSelectedLanguages(values as string[])}
+                >
                   {availableLanguages
-                    .filter(lang => lang.code !== currentLanguage)
-                    .map(lang => (
+                    .filter((lang) => lang.code !== currentLanguage)
+                    .map((lang) => (
                       <MenuItemOption key={lang.code} value={lang.code}>
                         {lang.name}
                       </MenuItemOption>
@@ -382,12 +498,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </VStack>
       </Box>
 
+      {/* Media Library */}
       <MediaLibrary
         isOpen={isMediaLibraryOpen}
         onClose={() => setIsMediaLibraryOpen(false)}
         onSelect={handleImageSelect}
       />
 
+      {/* AI Drawer */}
       <AIDrawer
         isOpen={isAIDrawerOpen}
         onClose={() => setIsAIDrawerOpen(false)}

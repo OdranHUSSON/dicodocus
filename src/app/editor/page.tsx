@@ -664,6 +664,8 @@ export default function HomePage() {
                 filePath={selectedFile.path}
                 editorInstance={editorInstance}
                 contentType={selectedFile.contentType}
+                files={files}
+                setFiles={setFiles}
               />
               <Box flex={1} w="full" display="flex">
                 {(viewMode === 'edit' || viewMode === 'split') && (
