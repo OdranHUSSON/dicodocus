@@ -10,7 +10,7 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { FiGlobe } from 'react-icons/fi';
-import { TranslateModal } from './TranslateModal';
+import { TranslateMenu } from './TranslateModal';
 
 interface MissingTranslation {
   path: string;
@@ -134,9 +134,7 @@ export function MissingTranslations({ onFileSelect,contentType, availableLanguag
       </VStack>
 
       {selectedFile && (
-        <TranslateModal
-          isOpen={isModalOpen}
-          onClose={handleModalClose}
+        <TranslateMenu                
           availableLanguages={availableLanguages}
           currentLanguage="en"
           filePath={selectedFile.path}

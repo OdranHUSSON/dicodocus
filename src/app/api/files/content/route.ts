@@ -5,7 +5,7 @@ import { getPaths, getLanguages } from '@/config/docusaurus'
 
 const { docsDir, blogDir, i18nDir, pagesDir } = getPaths()
 const { defaultLanguage } = getLanguages()
-const DEFAULT_LANG = process.env.DOCUSAURUS_DEFAULT_LANG || 'en'
+const DEFAULT_LANG = process.env.NEXT_PUBLIC_DOCUSAURUS_DEFAULT_LANG || 'en'
 
 export async function GET(request: NextRequest) {
   try {

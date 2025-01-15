@@ -60,7 +60,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
-  const [viewMode, setViewMode] = useState<ViewMode>('edit');
+  const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [currentLanguage, setCurrentLanguage] = useState('');
   const [availableLanguages, setAvailableLanguages] = useState<Language[]>([]);
   const [contentLanguage, setContentLanguage] = useState<string>('en');
@@ -664,6 +664,8 @@ export default function HomePage() {
                 filePath={selectedFile.path}
                 editorInstance={editorInstance}
                 contentType={selectedFile.contentType}
+                files={files}
+                setFiles={setFiles}
               />
               <Box flex={1} w="full" display="flex">
                 {(viewMode === 'edit' || viewMode === 'split') && (
@@ -691,14 +693,28 @@ export default function HomePage() {
                     borderLeftWidth={viewMode === 'split' ? '1px' : undefined}
                     borderColor="gray.200"
                   >
-                    <Box p={8} maxW={viewMode === 'preview' ? '800px' : undefined} mx="auto">
-                      <ReactMarkdown
-                        components={ChakraUIRenderer(markdownTheme)}
-                        remarkPlugins={[remarkFrontmatter, remarkBreaks]}
-                        skipHtml
-                      >
-                        {fileContent}
-                      </ReactMarkdown>
+                    <Box p={8} maxW={viewMode === 'preview' ? '800px' : undefined} mx="auto" height="100%">
+                      {selectedFile?.contentType && (
+                        currentLanguage === process.env.NEXT_PUBLIC_DOCUSAURUS_DEFAULT_LANG ? (
+                          <iframe
+                            src={`${process.env.NEXT_PUBLIC_DOCUSAURUS_URL}/${selectedFile.contentType}/${selectedFile.path.replace('.md', '')}`}
+                            style={{
+                              width: '100%',
+                              height: 'calc(100vh - 160px)', // Account for padding and toolbar
+                              border: 'none',
+                              display: 'block' // Prevent inline spacing issues
+                            }}
+                          />
+                        ) : (
+                          <ReactMarkdown
+                            components={ChakraUIRenderer(markdownTheme)} 
+                            remarkPlugins={[ remarkFrontmatter]}
+                            skipHtml
+                          >
+                            {fileContent}
+                          </ReactMarkdown>
+                        )
+                      )}
                     </Box>
                   </Box>
                 )}

@@ -72,8 +72,8 @@ Before setting up Dicodocus, ensure you have the following:
    Create a `.env.local` file in the root of the project:
    ```env
    DOCUSAURUS_ROOT_PATH=/path/to/docusaurus/root
-   DOCUSAURUS_DEFAULT_LANG=en
-   DOCUSAURUS_URL=http://localhost:3003
+   NEXT_PUBLIC_DOCUSAURUS_DEFAULT_LANG=en
+   NEXT_PUBLIC_DOCUSAURUS_URL=http://localhost:3003
    DOCUSAURUS_ENABLED_LANGS=en,es,fr,de
    DOCUSAURUS_MEDIA_DIR=static/img
    OPEN_AI_API_KEY=your-openai-api-key-here
